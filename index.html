@@ -8,6 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<!-- ag-psd: leitura de PSD direto no navegador -->
+<script type="module">
+  import { readPsd } from 'https://esm.sh/ag-psd@24';
+  window.readPsd = readPsd;
+  window.__agPsdReady = true;
+  window.dispatchEvent(new Event('agpsd-ready'));
+</script>
 <script>
 tailwind.config = {
   darkMode: 'class',
@@ -815,14 +822,28 @@ function addNotification(type, title, body) {
 }
 
 function persistAll() {
+  const payload = {
+    projetos: state.projetos, clientes: state.clientes,
+    revisaoStatus: state.revisaoStatus, approvalStatus: state.approvalStatus,
+    annotations: state.annotations, customFormats: state.customFormats,
+    notifications: state.notifications,
+  };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      projetos: state.projetos, clientes: state.clientes,
-      revisaoStatus: state.revisaoStatus, approvalStatus: state.approvalStatus,
-      annotations: state.annotations, customFormats: state.customFormats,
-      notifications: state.notifications,
-    }));
-  } catch(e) { console.warn(e); }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch(e) {
+    // Quota cheia — tenta uma versão "light" sem os dataUrls das imagens (que são pesados)
+    console.warn('persist quota:', e);
+    try {
+      const lite = {
+        ...payload,
+        projetos: state.projetos.map(p => ({ ...p, file: p.file ? { ...p.file, dataUrl: null } : null })),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lite));
+      console.warn('Persistido sem imagens (quota cheia)');
+    } catch(e2) {
+      console.error('persist falhou totalmente', e2);
+    }
+  }
 }
 const oldPersist = window.persist || (()=>{});
 window.persist = persistAll; // sobrescreve antigo
@@ -950,18 +971,90 @@ function triggerPSDUpload() {
   document.getElementById('psd-file-input').click();
 }
 
+// Adivinha categoria pelo nome da camada (heurística para PSDs reais)
+function guessCategory(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('logo') || n.includes('marca')) return 'Logo';
+  if (n.includes('headline') || n.includes('título') || n.includes('titulo') || n.includes('chamada')) return 'Headline';
+  if (n.includes('sub')) return 'Subheadline';
+  if (n.includes('hero') || n.includes('imagem principal') || n.includes('main')) return 'Hero';
+  if (n.includes('produto') || n.includes('product') || n.includes('pack')) return 'Produto';
+  if (n.includes('mascote') || n.includes('mascot') || n.includes('personagem') || n.includes('character')) return 'Mascote';
+  if (n.includes('fundo') || n.includes('background') || n.includes('bg') || n.includes('back')) return 'Fundo';
+  if (n.includes('cta') || n.includes('botão') || n.includes('botao') || n.includes('button') || n.includes('saiba') || n.includes('clique')) return 'CTA';
+  if (n.includes('legal') || n.includes('aviso') || n.includes('sanit') || n.includes('disclaimer')) return 'Legal';
+  return 'Outro';
+}
+
 // Lê arquivo real selecionado
-document.getElementById('psd-file-input').addEventListener('change', (e) => {
+document.getElementById('psd-file-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+
   state.uploadedFile = {
     name: file.name,
     size: file.size,
-    type: file.type,
+    type: file.type || 'application/octet-stream',
     sizeMB: (file.size / 1024 / 1024).toFixed(2),
   };
-  // Preview de imagem se for png/jpg
-  if (file.type.startsWith('image/')) {
+
+  const isPSD = file.name.toLowerCase().endsWith('.psd') || file.type === 'image/vnd.adobe.photoshop';
+
+  if (isPSD) {
+    if (!window.readPsd) {
+      // Aguarda lib carregar (timeout 5s)
+      await new Promise((resolve) => {
+        if (window.__agPsdReady) return resolve();
+        const t = setTimeout(resolve, 5000);
+        window.addEventListener('agpsd-ready', () => { clearTimeout(t); resolve(); }, { once: true });
+      });
+    }
+    if (!window.readPsd) {
+      toast('Não consegui carregar o leitor de PSD. Tente uma imagem PNG/JPG.');
+      return;
+    }
+    // Show loading toast
+    toast('Lendo PSD…');
+    try {
+      const buffer = await file.arrayBuffer();
+      const psd = window.readPsd(buffer, {
+        skipLayerImageData: false,
+        skipCompositeImageData: false,
+        skipThumbnail: false,
+      });
+      // composite image -> dataURL
+      if (psd.canvas) {
+        // Reduz se for muito grande pra caber no localStorage (~max 4MP)
+        state.uploadedFile.dataUrl = canvasToDataURLCapped(psd.canvas, 1920);
+        state.uploadedFile.width = psd.width;
+        state.uploadedFile.height = psd.height;
+      } else {
+        toast('PSD lido mas sem imagem composta');
+      }
+      // extrai camadas reais
+      const layers = [];
+      function walk(layer) {
+        if (layer.children && layer.children.length) {
+          layer.children.forEach(walk);
+        } else {
+          if (!layer.name) return;
+          layers.push({
+            id: 'l' + Date.now() + '_' + layers.length,
+            original: layer.name,
+            name: layer.name,
+            category: guessCategory(layer.name),
+            visible: !layer.hidden,
+          });
+        }
+      }
+      (psd.children || []).forEach(walk);
+      state.psdLayers = layers.length ? layers : PSD_LAYERS_INITIAL.map(l => ({ ...l }));
+      openPSDReview();
+    } catch (err) {
+      console.error('Erro ao ler PSD', err);
+      toast('Erro ao ler PSD: ' + (err.message || 'arquivo inválido'));
+    }
+  } else if (file.type.startsWith('image/')) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       state.uploadedFile.dataUrl = ev.target.result;
@@ -969,10 +1062,24 @@ document.getElementById('psd-file-input').addEventListener('change', (e) => {
     };
     reader.readAsDataURL(file);
   } else {
-    openPSDReview();
+    toast('Formato não suportado. Use PSD, PNG, JPG ou WEBP.');
   }
   e.target.value = ''; // permite re-upload do mesmo arquivo
 });
+
+// Reduz canvas pra não estourar quota do localStorage
+function canvasToDataURLCapped(srcCanvas, maxDimension) {
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const scale = Math.min(1, maxDimension / Math.max(w, h));
+  if (scale >= 1) {
+    try { return srcCanvas.toDataURL('image/jpeg', 0.92); } catch { return srcCanvas.toDataURL(); }
+  }
+  const c2 = document.createElement('canvas');
+  c2.width = Math.round(w * scale);
+  c2.height = Math.round(h * scale);
+  c2.getContext('2d').drawImage(srcCanvas, 0, 0, c2.width, c2.height);
+  return c2.toDataURL('image/jpeg', 0.92);
+}
 
 function createProjectFromScratch() {
   const campanha = document.getElementById('np-campanha').value.trim();
@@ -1226,16 +1333,28 @@ function renderEditor() {
   document.getElementById('editor-zoom-val').textContent = `${Math.round(z*100)}%`;
 
   if (p.file?.dataUrl) {
-    // imagem real
+    // imagem real (PSD composto ou PNG/JPG)
+    const isPSD = p.file.name?.toLowerCase().endsWith('.psd');
     wrap.innerHTML = `
       <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
         <img src="${p.file.dataUrl}" id="editor-img" class="block max-w-[800px] max-h-[600px] w-auto h-auto" alt="${p.nome}" />
         <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
+        ${isPSD ? `<div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">PSD · ${p.file.width||'?'}×${p.file.height||'?'}</div>` : ''}
       </div>
     `;
     renderLayerOverlays();
+  } else if (p.file && !p.file.dataUrl) {
+    // PSD aberto antes mas perdeu o dataUrl (quota localStorage)
+    wrap.innerHTML = `
+      <div class="text-center p-10 max-w-md">
+        <div class="text-5xl mb-4">📄</div>
+        <h3 class="font-bold text-lg mb-2">${p.file.name}</h3>
+        <p class="text-sm text-zinc-500 mb-4">A imagem do PSD não foi persistida (provavelmente muito grande para o armazenamento local). Re-importe o arquivo para visualizar.</p>
+        <button onclick="show('repositorio')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Voltar e re-importar</button>
+      </div>
+    `;
   } else {
-    // sem imagem (criado do zero)
+    // criado do zero — canvas vazio
     wrap.innerHTML = `
       <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
         <div class="w-[600px] h-[450px] flex items-center justify-center bg-gradient-to-br ${p.grad} text-white text-sm">Canvas em branco — adicione camadas pelo painel direito</div>
