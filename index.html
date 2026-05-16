@@ -66,22 +66,15 @@ tailwind.config = {
 </head>
 <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors">
 
-<!-- =========== TOP RIGHT: NAV DE DEV =========== -->
-<div id="top-controls" class="fixed top-3 right-3 z-50">
-  <div id="dev-nav-wrap" class="relative">
-    <button id="dev-nav-btn" onclick="toggleDevNav()" class="w-11 h-11 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition" title="Navegar entre telas">
-      <span>☰</span>
-    </button>
-    <div id="dev-nav-menu" class="hidden absolute top-12 right-0 bg-white/95 dark:bg-zinc-900/95 glass shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex flex-col gap-1 text-xs min-w-[180px]">
-      <button data-go="landing" class="nav-btn text-left px-3 py-2 rounded-lg">Início</button>
-      <button data-go="repositorio" class="nav-btn text-left px-3 py-2 rounded-lg">Repositório</button>
-      <button data-go="brand" class="nav-btn text-left px-3 py-2 rounded-lg">Brand Studio</button>
-      <button data-go="formatos" class="nav-btn text-left px-3 py-2 rounded-lg">Formatos</button>
-      <button data-go="wireframe" class="nav-btn text-left px-3 py-2 rounded-lg">Wireframe</button>
-      <button data-go="revisao" class="nav-btn text-left px-3 py-2 rounded-lg">Revisão</button>
-      <button data-go="aprovacao" class="nav-btn text-left px-3 py-2 rounded-lg">Aprovação</button>
-    </div>
-  </div>
+<!-- =========== BOTTOM CENTER: NAV DE DEV (visível, todos os botões) =========== -->
+<div id="dev-nav" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-full px-2 py-1.5 flex gap-1 text-xs">
+  <button data-go="landing" class="nav-btn px-3 py-1.5 rounded-full">Início</button>
+  <button data-go="repositorio" class="nav-btn px-3 py-1.5 rounded-full">Repositório</button>
+  <button data-go="brand" class="nav-btn px-3 py-1.5 rounded-full">Brand</button>
+  <button data-go="formatos" class="nav-btn px-3 py-1.5 rounded-full">Formatos</button>
+  <button data-go="wireframe" class="nav-btn px-3 py-1.5 rounded-full">Wireframe</button>
+  <button data-go="revisao" class="nav-btn px-3 py-1.5 rounded-full">Revisão</button>
+  <button data-go="aprovacao" class="nav-btn px-3 py-1.5 rounded-full">Aprovação</button>
 </div>
 
 <!-- =========== BOTTOM RIGHT: THEME =========== -->
@@ -90,7 +83,7 @@ tailwind.config = {
   <span class="theme-icon-dark hidden">🌙</span>
 </button>
 
-<div id="toasts" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 space-y-2"></div>
+<div id="toasts" class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] space-y-2"></div>
 
 <!-- =================================================== LANDING -->
 <div id="landing" class="screen active min-h-screen flex-col relative overflow-x-hidden">
@@ -501,14 +494,34 @@ tailwind.config = {
       <div><label class="block text-xs text-zinc-500 mb-1.5 font-medium">Nome da campanha</label><input placeholder="ex: Verão 2026" class="w-full border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-xl px-3 py-2"></div>
       <div><label class="block text-xs text-zinc-500 mb-1.5 font-medium">Modo de início</label>
         <div class="grid grid-cols-2 gap-2">
-          <button class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 transition text-sm"><div class="text-xl mb-1">📄</div>Upload PSD</button>
-          <button class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 transition text-sm"><div class="text-xl mb-1">✏️</div>Criar do zero</button>
+          <button onclick="openPSDReview()" class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-950/30 transition text-sm group"><div class="text-xl mb-1 group-hover:scale-110 transition">📄</div>Upload PSD</button>
+          <button onclick="closeNewProject(); show('brand'); toast('Projeto vazio criado')" class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-950/30 transition text-sm group"><div class="text-xl mb-1 group-hover:scale-110 transition">✏️</div>Criar do zero</button>
         </div>
       </div>
     </div>
     <div class="flex justify-end gap-2 pt-2">
       <button onclick="closeNewProject()" class="px-4 py-2 rounded-xl text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">Cancelar</button>
-      <button onclick="closeNewProject(); show('brand'); toast('Projeto criado')" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold">Criar e abrir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE REVISÃO DE PSD -->
+<div id="psd-review-modal" class="hidden fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+  <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
+    <div class="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+      <div>
+        <h3 class="font-bold text-lg flex items-center gap-2"><span class="text-xl">🔍</span> Revisão do PSD</h3>
+        <p class="text-xs text-zinc-500 mt-1">Etapa 2 de 2 — confirme as camadas identificadas pela IA</p>
+      </div>
+      <button onclick="closePSDReview()" class="w-9 h-9 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 flex items-center justify-center text-xl">×</button>
+    </div>
+    <div id="psd-modal-body" class="p-6 overflow-auto flex-1"></div>
+    <div id="psd-modal-footer" class="p-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-2">
+      <span id="psd-layer-count" class="text-xs text-zinc-500"></span>
+      <div class="flex gap-2">
+        <button onclick="closePSDReview()" class="px-4 py-2 rounded-xl text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">Cancelar</button>
+        <button id="psd-confirm-btn" onclick="confirmPSDLayers()" class="btn-primary px-5 py-2 rounded-xl text-sm font-semibold">Confirmar e abrir editor</button>
+      </div>
     </div>
   </div>
 </div>
@@ -591,6 +604,35 @@ const FORMATS = [
 
 const ELEMENTS = ['Logo', 'Hero', 'Headline', 'CTA', 'Aviso'];
 
+// PSD parsing — categorias de camada e mock do que a "IA" identifica
+const LAYER_CATEGORIES = [
+  { key:'Logo',         icon:'🅰️' },
+  { key:'Headline',     icon:'📰' },
+  { key:'Subheadline',  icon:'📝' },
+  { key:'Hero',         icon:'🖼️' },
+  { key:'Mascote',      icon:'🐎' },
+  { key:'Produto',      icon:'📦' },
+  { key:'Fundo',        icon:'🌅' },
+  { key:'CTA',          icon:'🎯' },
+  { key:'Legal',        icon:'⚖️' },
+  { key:'Outro',        icon:'❓' },
+];
+
+const PSD_LAYERS_INITIAL = [
+  { id:'l1',  original:'Layer 12',       name:'Logo Marlboro',          category:'Logo' },
+  { id:'l2',  original:'TextLayer 3',    name:'Headline principal',     category:'Headline' },
+  { id:'l3',  original:'TextLayer 5',    name:'Subheadline',            category:'Subheadline' },
+  { id:'l4',  original:'Group 8',        name:'Mascote (cavaleiro)',    category:'Mascote' },
+  { id:'l5',  original:'Background',     name:'Fundo arena',            category:'Fundo' },
+  { id:'l6',  original:'TextLayer 11',   name:'Aviso legal',            category:'Legal' },
+  { id:'l7',  original:'Button',         name:'CTA "Conheça"',          category:'CTA' },
+  { id:'l8',  original:'Image 1',        name:'Produto — Vermelho',     category:'Produto' },
+  { id:'l9',  original:'Image 2',        name:'Produto — Azul',         category:'Produto' },
+  { id:'l10', original:'Image 3',        name:'Produto — Verde',        category:'Produto' },
+  { id:'l11', original:'Image 4',        name:'Produto — Branco',       category:'Produto' },
+  { id:'l12', original:'Image 5',        name:'Produto — Preto',        category:'Produto' },
+];
+
 const AI_RESPONSES = {
   'Hero':     'Crop reposicionado para enquadrar rosto e produto. Mantive 70% do hero original.',
   'Headline': 'Texto comprimido para 32px (mínimo legível). Headline em uma única linha.',
@@ -623,6 +665,144 @@ FORMATS.forEach((f,i)=>{
 
 // projetos mutáveis (para suportar exclusão)
 state.projetos = PROJETOS.map(p => ({ ...p }));
+
+// PSD review state
+state.psdLayers = [];
+state.psdPhase = 'idle'; // 'uploading' | 'parsing' | 'review'
+
+function openPSDReview() {
+  closeNewProject();
+  state.psdLayers = PSD_LAYERS_INITIAL.map(l => ({ ...l }));
+  state.psdPhase = 'uploading';
+  const m = document.getElementById('psd-review-modal');
+  m.classList.remove('hidden'); m.classList.add('flex');
+  renderPSDModal();
+  // Simula upload → parsing → review
+  setTimeout(() => { state.psdPhase = 'parsing'; renderPSDModal(); }, 800);
+  setTimeout(() => { state.psdPhase = 'review';  renderPSDModal(); }, 2400);
+}
+
+function closePSDReview() {
+  const m = document.getElementById('psd-review-modal');
+  m.classList.add('hidden'); m.classList.remove('flex');
+  state.psdPhase = 'idle';
+}
+
+function renderPSDModal() {
+  const body = document.getElementById('psd-modal-body');
+  const footer = document.getElementById('psd-modal-footer');
+  const countEl = document.getElementById('psd-layer-count');
+  const btn = document.getElementById('psd-confirm-btn');
+
+  if (state.psdPhase === 'uploading' || state.psdPhase === 'parsing') {
+    const isUploading = state.psdPhase === 'uploading';
+    body.innerHTML = `
+      <div class="py-16 flex flex-col items-center justify-center gap-6">
+        <div class="w-20 h-20 rounded-full gradient-bg flex items-center justify-center text-4xl shadow-glow-lg" style="animation: pulse 1.5s ease-in-out infinite">
+          ${isUploading ? '📤' : '🔍'}
+        </div>
+        <div class="text-center space-y-2 max-w-md">
+          <h3 class="font-bold text-xl">${isUploading ? 'Enviando seu PSD…' : 'Analisando camadas…'}</h3>
+          <p class="text-sm text-zinc-500">${isUploading
+            ? 'Recebendo o arquivo e preparando para análise.'
+            : 'A IA está identificando elementos, classificando hierarquia visual e mapeando cada camada.'}</p>
+        </div>
+        <div class="w-64 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div class="h-full gradient-bg" style="animation: psd-progress ${isUploading?'0.8':'1.6'}s ease-in-out forwards; width:0%"></div>
+        </div>
+      </div>
+      <style>@keyframes psd-progress { from{width:0%} to{width:100%} } @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:.85} }</style>
+    `;
+    footer.style.display = 'none';
+    return;
+  }
+
+  // review
+  footer.style.display = 'flex';
+  // Agrupa por categoria pra montar o resumo "Logo (1), Headline (1), Produto (5)..."
+  const byCat = {};
+  state.psdLayers.forEach(l => byCat[l.category] = (byCat[l.category]||0)+1);
+  // ordem: pela ordem definida em LAYER_CATEGORIES
+  const ordered = LAYER_CATEGORIES
+    .map(c => c.key)
+    .filter(k => byCat[k])
+    .concat(Object.keys(byCat).filter(k => !LAYER_CATEGORIES.find(c => c.key===k)));
+  const summary = ordered.map(k => `<span class="inline-block px-2 py-0.5 rounded-full bg-white/70 dark:bg-zinc-900/70 text-xs font-semibold mr-1.5 mb-1">${(LAYER_CATEGORIES.find(c=>c.key===k)||{}).icon||''} ${k} (${byCat[k]})</span>`).join('');
+
+  body.innerHTML = `
+    <div class="space-y-5">
+      <div class="rounded-2xl border border-brand-200 dark:border-brand-800 p-5" style="background: var(--gradient-soft)">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl shrink-0">🤖</span>
+          <div class="flex-1">
+            <h4 class="font-bold text-base mb-1.5">Identifiquei ${state.psdLayers.length} camadas no seu PSD</h4>
+            <div class="-mb-1.5">${summary}</div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-3 leading-relaxed">
+              <strong>Confirme a classificação abaixo.</strong> Se a IA errou, ajuste agora —
+              isso afeta todo o desdobramento. Você pode renomear, mudar categoria ou remover camadas.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        ${state.psdLayers.length === 0
+          ? '<p class="text-sm text-zinc-500 text-center py-8">Todas as camadas foram removidas. <button onclick="resetPSDLayers()" class="gradient-text font-semibold hover:underline">Restaurar</button></p>'
+          : state.psdLayers.map(renderLayerRow).join('')}
+      </div>
+
+      <button onclick="addEmptyLayer()" class="w-full rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 py-3 text-sm text-zinc-500 hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400 transition">+ Adicionar camada manualmente</button>
+    </div>
+  `;
+  countEl.textContent = `${state.psdLayers.length} camada${state.psdLayers.length===1?'':'s'} pronta${state.psdLayers.length===1?'':'s'} para confirmar`;
+  btn.disabled = state.psdLayers.length === 0;
+  btn.className = state.psdLayers.length === 0
+    ? 'px-5 py-2 rounded-xl text-sm font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
+    : 'btn-primary px-5 py-2 rounded-xl text-sm font-semibold';
+}
+
+function renderLayerRow(l) {
+  const cat = LAYER_CATEGORIES.find(c => c.key === l.category) || LAYER_CATEGORIES[LAYER_CATEGORIES.length-1];
+  return `
+    <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 flex items-center gap-3 hover:border-brand-300 dark:hover:border-brand-700 transition">
+      <span class="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0" style="background: var(--gradient-soft)">${cat.icon}</span>
+      <div class="flex-1 min-w-0">
+        <input value="${l.name.replace(/"/g,'&quot;')}" oninput="updateLayerName('${l.id}', this.value)" class="w-full bg-transparent border-none text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 rounded px-1" />
+        <p class="text-[10px] text-zinc-400 mt-0.5 px-1">Original: <span class="font-mono">${l.original}</span></p>
+      </div>
+      <select onchange="updateLayerCategory('${l.id}', this.value)" class="text-xs border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 shrink-0">
+        ${LAYER_CATEGORIES.map(c => `<option value="${c.key}" ${c.key===l.category?'selected':''}>${c.icon} ${c.key}</option>`).join('')}
+      </select>
+      <button onclick="removeLayer('${l.id}')" class="w-8 h-8 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 text-zinc-400 hover:text-red-500 transition shrink-0" title="Remover camada">×</button>
+    </div>
+  `;
+}
+
+function updateLayerName(id, name) { const l = state.psdLayers.find(x=>x.id===id); if (l) l.name = name; }
+function updateLayerCategory(id, cat) {
+  const l = state.psdLayers.find(x=>x.id===id);
+  if (l) { l.category = cat; renderPSDModal(); }
+}
+function removeLayer(id) {
+  state.psdLayers = state.psdLayers.filter(x=>x.id!==id);
+  renderPSDModal();
+  toast('Camada removida');
+}
+function resetPSDLayers() {
+  state.psdLayers = PSD_LAYERS_INITIAL.map(l => ({ ...l }));
+  renderPSDModal();
+}
+function addEmptyLayer() {
+  const id = 'l'+Date.now();
+  state.psdLayers.push({ id, original:'(manual)', name:'Nova camada', category:'Outro' });
+  renderPSDModal();
+}
+function confirmPSDLayers() {
+  if (state.psdLayers.length === 0) return;
+  closePSDReview();
+  show('brand');
+  toast(`PSD importado com ${state.psdLayers.length} camadas ✨`);
+}
 
 function deleteProject(id) {
   const p = state.projetos.find(x => x.id === id);
@@ -686,10 +866,6 @@ function show(id) {
 
 function back(currentId) { show(BACK_MAP[currentId] || 'repositorio'); }
 
-function toggleDevNav() {
-  document.getElementById('dev-nav-menu').classList.toggle('hidden');
-}
-
 function toggleProjectMenu(id, ev) {
   if (ev) { ev.stopPropagation(); ev.preventDefault(); }
   document.querySelectorAll('[id^="menu-"]').forEach(m => {
@@ -699,11 +875,8 @@ function toggleProjectMenu(id, ev) {
   if (menu) menu.classList.toggle('hidden');
 }
 
-// fecha dev-nav e menus de projeto ao clicar fora
+// fecha menus de projeto ao clicar fora
 document.addEventListener('click', e => {
-  if (!e.target.closest('#dev-nav-wrap')) {
-    document.getElementById('dev-nav-menu').classList.add('hidden');
-  }
   if (!e.target.closest('[id^="menu-"]') && !e.target.closest('button[onclick^="toggleProjectMenu"]')) {
     document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
   }
@@ -1195,9 +1368,10 @@ show('landing');
 document.getElementById('annotation-modal').addEventListener('click', e => { if(e.target.id==='annotation-modal') closeAnnotation(); });
 document.getElementById('new-project-modal').addEventListener('click', e => { if(e.target.id==='new-project-modal') closeNewProject(); });
 document.getElementById('global-ai-modal').addEventListener('click', e => { if(e.target.id==='global-ai-modal') closeGlobalAI(); });
+document.getElementById('psd-review-modal').addEventListener('click', e => { if(e.target.id==='psd-review-modal') closePSDReview(); });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeAnnotation(); closeNewProject(); closeGlobalAI(); }
+  if (e.key === 'Escape') { closeAnnotation(); closeNewProject(); closeGlobalAI(); closePSDReview(); }
   if (e.key === 'Backspace' && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
     if (state.activeScreen !== 'repositorio') { e.preventDefault(); back(state.activeScreen); }
   }
