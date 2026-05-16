@@ -327,6 +327,7 @@ tailwind.config = {
       <span id="editor-breadcrumb" class="text-sm text-zinc-500 ml-2"></span>
     </div>
     <div class="flex items-center gap-2">
+      <button onclick="toast('💡 Arraste as caixas roxas para indicar onde cada camada vai no formato. A geração final usa essas posições.')" class="px-2 py-1.5 rounded-lg text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" title="Como funciona">💡</button>
       <button onclick="show('brand')" class="px-3 py-1.5 rounded-lg text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">🎨 Brand kit</button>
       <button onclick="saveEditorChanges()" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold">✓ Salvar e voltar à revisão</button>
     </div>
@@ -1369,14 +1370,12 @@ function openProject(id) {
   if (Array.isArray(p.layers)) p.layers.forEach(l => { if (l.visible === undefined) l.visible = true; });
   state.editorZoom = 1;
   state.editingFormatId = null;
-  ensureLayerImages(p);
   show('brand');
 }
 
 function editFormat(formatId) {
   state.editingFormatId = formatId;
   state.editorZoom = 1;
-  if (state.currentProject) ensureLayerImages(state.currentProject).then(()=>renderEditor());
   show('editor');
 }
 
@@ -1432,7 +1431,6 @@ async function ensureLayerImages(p) {
 
 function renderEditor() {
   const p = state.currentProject;
-  if (p) ensureLayerImages(p); // garante imagens em cada visualização
   if (!p) {
     document.getElementById('editor-canvas-wrap').innerHTML = `
       <div class="text-center p-10">
@@ -1496,40 +1494,20 @@ function renderEditor() {
         : 'KV master';
     }
 
-    // ★ Tem camadas individuais extraídas do PSD?
-    const hasLayerImages = (p.layers||[]).some(l => l.dataUrl);
-
-    if (hasLayerImages) {
-      // Composite no fundo (100% opacidade) + camadas como crops por cima
-      // Quando o usuário arrasta um crop, ele sai da posição original revelando
-      // o composite atrás. Visualmente intuitivo.
-      const layersExtracted = (p.layers||[]).filter(l=>l.dataUrl).length;
-      const totalLayers = (p.layers||[]).length;
-      wrap.innerHTML = `
-        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-zinc-900" style="transform: scale(${z}); transform-origin: center;">
-          <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden;">
-            <img src="${p.file.dataUrl}" class="absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'} pointer-events-none" alt="composta" />
-            <div id="layer-stack" class="absolute inset-0"></div>
-            <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
-          </div>
-          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${layersExtracted}/${totalLayers} camadas</div>
+    // Renderização unificada: composite ao fundo + caixas posicionais por cima.
+    // Não renderizamos crops das camadas para evitar duplicação visual (PSD complexos
+    // não permitem extração limpa de camadas individuais via browser).
+    const totalLayers = (p.layers||[]).length;
+    wrap.innerHTML = `
+      <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden" style="transform: scale(${z}); transform-origin: center;">
+        <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden; background:#fff">
+          <img src="${p.file.dataUrl}" id="editor-img" class="block absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'}" alt="${p.nome}" />
+          <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
         </div>
-      `;
-      renderLayerImages();
-      renderLayerOverlays();
-    } else {
-      // PNG/JPG ou PSD sem camadas extraíveis: imagem composta + overlays mock
-      wrap.innerHTML = `
-        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
-          <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden;">
-            <img src="${p.file.dataUrl}" id="editor-img" class="block absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'}" alt="${p.nome}" />
-            <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
-          </div>
-          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo}</div>
-        </div>
-      `;
-      renderLayerOverlays();
-    }
+        <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${totalLayers} camada${totalLayers!==1?'s':''}</div>
+      </div>
+    `;
+    renderLayerOverlays();
   } else if (p.file && !p.file.dataUrl) {
     // PSD aberto antes mas perdeu o dataUrl (quota localStorage)
     wrap.innerHTML = `
@@ -1609,13 +1587,13 @@ function renderLayerOverlays() {
     const pos = getLayerPos(l);
     const sel = state.selectedLayerId === l.id;
     return `
-      <div data-layer-id="${l.id}" onmousedown="onOverlayDrag(event, '${l.id}')" class="absolute border-2 ${sel?'border-solid shadow-glow':'border-dashed'} rounded transition-colors group cursor-move pointer-events-auto" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%; border-color: ${sel?'#8b5cf6':'rgba(139,92,246,.6)'}; background: ${sel?'rgba(139,92,246,.18)':'rgba(139,92,246,.06)'}; z-index: ${sel?20:10}">
-        <span class="absolute -top-5 left-0 text-[9px] ${sel?'gradient-bg':'bg-brand-600'} text-white px-1.5 py-0.5 rounded font-semibold whitespace-nowrap pointer-events-none">${l.name}</span>
+      <div data-layer-id="${l.id}" onmousedown="onOverlayDrag(event, '${l.id}')" class="absolute border-2 ${sel?'border-solid shadow-glow':'border-dashed'} rounded group cursor-move pointer-events-auto" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%; border-color: ${sel?'#fff':'rgba(255,255,255,.7)'}; background: ${sel?'rgba(139,92,246,.35)':'rgba(0,0,0,.25)'}; z-index: ${sel?20:10}; box-shadow: ${sel?'0 0 0 1px rgba(139,92,246,.8), 0 0 30px -5px rgba(139,92,246,.8)':'0 0 0 1px rgba(0,0,0,.3)'}">
+        <span class="absolute -top-5 left-0 text-[10px] ${sel?'gradient-bg':'bg-black/80 backdrop-blur'} text-white px-1.5 py-0.5 rounded font-semibold whitespace-nowrap pointer-events-none">${l.name}</span>
         ${sel ? `
-          <div onmousedown="onOverlayResize(event, '${l.id}', 'nw')" class="absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full gradient-bg cursor-nwse-resize"></div>
-          <div onmousedown="onOverlayResize(event, '${l.id}', 'ne')" class="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full gradient-bg cursor-nesw-resize"></div>
-          <div onmousedown="onOverlayResize(event, '${l.id}', 'sw')" class="absolute -bottom-1.5 -left-1.5 w-3 h-3 rounded-full gradient-bg cursor-nesw-resize"></div>
-          <div onmousedown="onOverlayResize(event, '${l.id}', 'se')" class="absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-full gradient-bg cursor-nwse-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'nw')" class="absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full bg-white border-2 border-brand-500 cursor-nwse-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'ne')" class="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-white border-2 border-brand-500 cursor-nesw-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'sw')" class="absolute -bottom-1.5 -left-1.5 w-3 h-3 rounded-full bg-white border-2 border-brand-500 cursor-nesw-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'se')" class="absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-full bg-white border-2 border-brand-500 cursor-nwse-resize"></div>
         ` : ''}
       </div>
     `;
@@ -1644,7 +1622,6 @@ function onOverlayDrag(e, layerId) {
     const dy = ((ev.clientY - startY) / rect.height) * 100;
     pos.x = Math.max(0, Math.min(100 - pos.w, initX + dx));
     pos.y = Math.max(0, Math.min(100 - pos.h, initY + dy));
-    renderLayerImages();
     renderLayerOverlays();
   }
   function onUp() {
@@ -1684,7 +1661,6 @@ function onOverlayResize(e, layerId, corner) {
     pos.y = Math.max(0, Math.min(100 - h, y));
     pos.w = Math.min(100 - pos.x, w);
     pos.h = Math.min(100 - pos.y, h);
-    renderLayerImages();
     renderLayerOverlays();
   }
   function onUp() {
