@@ -77,7 +77,6 @@ tailwind.config = {
 <div id="dev-nav" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-full px-2 py-1.5 flex gap-1 text-xs">
   <button data-go="landing" class="nav-btn px-3 py-1.5 rounded-full">Início</button>
   <button data-go="repositorio" class="nav-btn px-3 py-1.5 rounded-full">Repositório</button>
-  <button data-go="editor" class="nav-btn px-3 py-1.5 rounded-full">Editor</button>
   <button data-go="brand" class="nav-btn px-3 py-1.5 rounded-full">Brand</button>
   <button data-go="formatos" class="nav-btn px-3 py-1.5 rounded-full">Formatos</button>
   <button data-go="wireframe" class="nav-btn px-3 py-1.5 rounded-full">Wireframe</button>
@@ -1330,7 +1329,6 @@ function editFormat(formatId) {
 function renderEditor() {
   const p = state.currentProject;
   if (!p) {
-    // sem projeto aberto, força usuário a abrir um
     document.getElementById('editor-canvas-wrap').innerHTML = `
       <div class="text-center p-10">
         <div class="text-5xl mb-4">📂</div>
@@ -1341,6 +1339,22 @@ function renderEditor() {
     `;
     document.getElementById('editor-layers').innerHTML = '';
     document.getElementById('editor-breadcrumb').textContent = '';
+    return;
+  }
+  if (!state.editingFormatId) {
+    document.getElementById('editor-canvas-wrap').innerHTML = `
+      <div class="text-center p-10 max-w-md">
+        <div class="text-5xl mb-4">✏️</div>
+        <h3 class="font-bold text-lg mb-2">Editor manual por formato</h3>
+        <p class="text-sm text-zinc-500 mb-6">O editor abre depois que você seleciona os formatos e gera a revisão. Na <strong>Revisão</strong>, clique em ✏️ em qualquer formato para ajustá-lo manualmente.</p>
+        <div class="flex gap-2 justify-center">
+          <button onclick="show('formatos')" class="px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">Selecionar formatos</button>
+          <button onclick="show('revisao')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Ir para Revisão</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('editor-layers').innerHTML = '<p class="text-xs text-zinc-500 text-center py-6">Selecione um formato na Revisão para editar suas camadas.</p>';
+    document.getElementById('editor-breadcrumb').innerHTML = `${p.cliente} · ${p.nome} · <span class="gradient-text font-semibold">Editor</span>`;
     return;
   }
   // Contexto do formato em edição
@@ -1403,36 +1417,145 @@ function renderEditor() {
   renderEditorLayers();
 }
 
+const DEFAULT_POS = {
+  Logo:        { x: 5,  y: 5,  w: 18, h: 10 },
+  Headline:    { x: 8,  y: 60, w: 84, h: 12 },
+  Subheadline: { x: 8,  y: 74, w: 60, h: 7 },
+  Hero:        { x: 0,  y: 0,  w: 100, h: 60 },
+  Mascote:     { x: 30, y: 18, w: 40, h: 50 },
+  Produto:     { x: 25, y: 25, w: 50, h: 50 },
+  Fundo:       { x: 0,  y: 0,  w: 100, h: 100 },
+  CTA:         { x: 8,  y: 84, w: 25, h: 8 },
+  Legal:       { x: 8,  y: 94, w: 84, h: 4 },
+  Outro:       { x: 40, y: 40, w: 20, h: 20 },
+};
+
+function getLayerPos(layer) {
+  const formatId = state.editingFormatId || '__base__';
+  if (!layer.positions) layer.positions = {};
+  if (!layer.positions[formatId]) {
+    layer.positions[formatId] = { ...(DEFAULT_POS[layer.category] || DEFAULT_POS.Outro) };
+  }
+  return layer.positions[formatId];
+}
+
+state.selectedLayerId = null;
+
 function renderLayerOverlays() {
-  // Desenha contornos sutis para representar onde cada camada estaria (mockado por ordem)
   const overlays = document.getElementById('editor-overlays');
   if (!overlays) return;
   const p = state.currentProject;
   const visibles = (p.layers||[]).filter(l => l.visible !== false);
-  const img = document.getElementById('editor-img');
-  if (!img) return;
-  // Posições mockadas por categoria (porcentagens)
-  const POS = {
-    Logo:        { x: 5,  y: 5,  w: 18, h: 10 },
-    Headline:    { x: 8,  y: 60, w: 84, h: 12 },
-    Subheadline: { x: 8,  y: 74, w: 60, h: 7 },
-    Hero:        { x: 0,  y: 0,  w: 100, h: 60 },
-    Mascote:     { x: 30, y: 18, w: 40, h: 50 },
-    Produto:     { x: 25, y: 25, w: 50, h: 50 },
-    Fundo:       { x: 0,  y: 0,  w: 100, h: 100 },
-    CTA:         { x: 8,  y: 84, w: 25, h: 8 },
-    Legal:       { x: 8,  y: 94, w: 84, h: 4 },
-    Outro:       { x: 40, y: 40, w: 20, h: 20 },
-  };
+
   overlays.innerHTML = visibles.map(l => {
-    const pos = POS[l.category] || POS.Outro;
+    const pos = getLayerPos(l);
+    const sel = state.selectedLayerId === l.id;
     return `
-      <div class="absolute border-2 border-dashed rounded transition" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%; border-color: rgba(139,92,246,.5); background: rgba(139,92,246,.05)">
-        <span class="absolute -top-5 left-0 text-[9px] bg-brand-600 text-white px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">${l.name}</span>
+      <div data-layer-id="${l.id}" onmousedown="onOverlayDrag(event, '${l.id}')" class="absolute border-2 ${sel?'border-solid shadow-glow':'border-dashed'} rounded transition-colors group cursor-move pointer-events-auto" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%; border-color: ${sel?'#8b5cf6':'rgba(139,92,246,.6)'}; background: ${sel?'rgba(139,92,246,.18)':'rgba(139,92,246,.06)'}; z-index: ${sel?20:10}">
+        <span class="absolute -top-5 left-0 text-[9px] ${sel?'gradient-bg':'bg-brand-600'} text-white px-1.5 py-0.5 rounded font-semibold whitespace-nowrap pointer-events-none">${l.name}</span>
+        ${sel ? `
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'nw')" class="absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full gradient-bg cursor-nwse-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'ne')" class="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full gradient-bg cursor-nesw-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'sw')" class="absolute -bottom-1.5 -left-1.5 w-3 h-3 rounded-full gradient-bg cursor-nesw-resize"></div>
+          <div onmousedown="onOverlayResize(event, '${l.id}', 'se')" class="absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-full gradient-bg cursor-nwse-resize"></div>
+        ` : ''}
       </div>
     `;
   }).join('');
+  // Permite overlays receberem eventos mesmo dentro do container `pointer-events-none`
+  overlays.style.pointerEvents = 'none';
 }
+
+// Drag para mover camada
+function onOverlayDrag(e, layerId) {
+  if (e.target !== e.currentTarget) return; // ignora clicks em handles de resize
+  e.preventDefault();
+  state.selectedLayerId = layerId;
+  const p = state.currentProject;
+  const layer = p.layers.find(l => l.id === layerId);
+  if (!layer) return;
+  const pos = getLayerPos(layer);
+  const overlays = document.getElementById('editor-overlays');
+  const rect = overlays.getBoundingClientRect();
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const initX = pos.x, initY = pos.y;
+
+  function onMove(ev) {
+    const dx = ((ev.clientX - startX) / rect.width) * 100;
+    const dy = ((ev.clientY - startY) / rect.height) * 100;
+    pos.x = Math.max(0, Math.min(100 - pos.w, initX + dx));
+    pos.y = Math.max(0, Math.min(100 - pos.h, initY + dy));
+    renderLayerOverlays();
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    persistAll();
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  renderLayerOverlays();
+}
+
+// Resize via handles dos cantos
+function onOverlayResize(e, layerId, corner) {
+  e.preventDefault();
+  e.stopPropagation();
+  const p = state.currentProject;
+  const layer = p.layers.find(l => l.id === layerId);
+  if (!layer) return;
+  const pos = getLayerPos(layer);
+  const overlays = document.getElementById('editor-overlays');
+  const rect = overlays.getBoundingClientRect();
+  const startX = e.clientX, startY = e.clientY;
+  const init = { ...pos };
+
+  function onMove(ev) {
+    const dx = ((ev.clientX - startX) / rect.width) * 100;
+    const dy = ((ev.clientY - startY) / rect.height) * 100;
+    let x=init.x, y=init.y, w=init.w, h=init.h;
+    if (corner.includes('e')) w = Math.max(3, init.w + dx);
+    if (corner.includes('w')) { w = Math.max(3, init.w - dx); x = init.x + (init.w - w); }
+    if (corner.includes('s')) h = Math.max(3, init.h + dy);
+    if (corner.includes('n')) { h = Math.max(3, init.h - dy); y = init.y + (init.h - h); }
+    // clamp
+    pos.x = Math.max(0, Math.min(100 - w, x));
+    pos.y = Math.max(0, Math.min(100 - h, y));
+    pos.w = Math.min(100 - pos.x, w);
+    pos.h = Math.min(100 - pos.y, h);
+    renderLayerOverlays();
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    persistAll();
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// Reset posição da camada (volta ao default da categoria)
+function resetLayerPos(layerId) {
+  const p = state.currentProject;
+  const layer = p.layers.find(l => l.id === layerId);
+  if (!layer) return;
+  const fmtId = state.editingFormatId || '__base__';
+  if (layer.positions && layer.positions[fmtId]) {
+    layer.positions[fmtId] = { ...(DEFAULT_POS[layer.category] || DEFAULT_POS.Outro) };
+    persistAll(); renderLayerOverlays();
+    toast('Posição resetada');
+  }
+}
+
+// Click no canvas (fora de overlay) → deseleciona
+document.addEventListener('mousedown', e => {
+  if (state.activeScreen !== 'editor') return;
+  if (!e.target.closest('[data-layer-id]') && !e.target.closest('#editor-layers') && state.selectedLayerId) {
+    state.selectedLayerId = null;
+    renderLayerOverlays();
+  }
+});
 
 function renderEditorLayers() {
   const p = state.currentProject;
@@ -1444,15 +1567,17 @@ function renderEditorLayers() {
   list.innerHTML = p.layers.map((l, i) => {
     const cat = LAYER_CATEGORIES.find(c => c.key === l.category) || LAYER_CATEGORIES[LAYER_CATEGORIES.length-1];
     const visible = l.visible !== false;
+    const isSel = state.selectedLayerId === l.id;
     return `
-      <div class="group rounded-xl border border-zinc-200 dark:border-zinc-800 ${visible?'bg-white dark:bg-zinc-900':'bg-zinc-100 dark:bg-zinc-800/50 opacity-60'} hover:border-brand-400 transition">
+      <div onclick="selectLayer('${l.id}')" class="group rounded-xl border ${isSel?'border-brand-500 shadow-glow':'border-zinc-200 dark:border-zinc-800'} ${visible?'bg-white dark:bg-zinc-900':'bg-zinc-100 dark:bg-zinc-800/50 opacity-60'} hover:border-brand-400 transition cursor-pointer">
         <div class="p-2.5 flex items-center gap-2">
-          <button onclick="toggleLayerVisible(${i})" class="w-7 h-7 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-sm" title="${visible?'Esconder':'Mostrar'}">${visible?'👁':'🙈'}</button>
+          <button onclick="event.stopPropagation(); toggleLayerVisible(${i})" class="w-7 h-7 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-sm" title="${visible?'Esconder':'Mostrar'}">${visible?'👁':'🙈'}</button>
           <span class="w-7 h-7 rounded-md flex items-center justify-center text-sm shrink-0" style="background: var(--gradient-soft)">${cat.icon}</span>
-          <input value="${(l.name||'').replace(/"/g,'&quot;')}" oninput="updateEditorLayerName(${i}, this.value)" class="flex-1 min-w-0 bg-transparent border-none text-xs font-medium focus:outline-none focus:bg-zinc-50 dark:focus:bg-zinc-950 rounded px-1.5 py-1" />
-          <button onclick="moveLayer(${i}, -1)" ${i===0?'disabled':''} class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">↑</button>
-          <button onclick="moveLayer(${i}, 1)" ${i===p.layers.length-1?'disabled':''} class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs disabled:opacity-30 disabled:cursor-not-allowed" title="Descer">↓</button>
-          <button onclick="removeEditorLayer(${i})" class="w-6 h-6 rounded hover:bg-red-50 dark:hover:bg-red-950/50 text-zinc-400 hover:text-red-500 text-xs">×</button>
+          <input onclick="event.stopPropagation()" value="${(l.name||'').replace(/"/g,'&quot;')}" oninput="updateEditorLayerName(${i}, this.value)" class="flex-1 min-w-0 bg-transparent border-none text-xs font-medium focus:outline-none focus:bg-zinc-50 dark:focus:bg-zinc-950 rounded px-1.5 py-1" />
+          <button onclick="event.stopPropagation(); resetLayerPos('${l.id}')" class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs" title="Resetar posição">↺</button>
+          <button onclick="event.stopPropagation(); moveLayer(${i}, -1)" ${i===0?'disabled':''} class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">↑</button>
+          <button onclick="event.stopPropagation(); moveLayer(${i}, 1)" ${i===p.layers.length-1?'disabled':''} class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs disabled:opacity-30 disabled:cursor-not-allowed" title="Descer">↓</button>
+          <button onclick="event.stopPropagation(); removeEditorLayer(${i})" class="w-6 h-6 rounded hover:bg-red-50 dark:hover:bg-red-950/50 text-zinc-400 hover:text-red-500 text-xs">×</button>
         </div>
         <div class="px-2.5 pb-2 flex items-center gap-1.5">
           <select onchange="updateEditorLayerCategory(${i}, this.value)" class="flex-1 text-[10px] border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded px-1.5 py-1 focus:outline-none">
@@ -1462,6 +1587,12 @@ function renderEditorLayers() {
       </div>
     `;
   }).join('');
+}
+
+function selectLayer(id) {
+  state.selectedLayerId = id;
+  renderLayerOverlays();
+  renderEditorLayers();
 }
 
 function toggleLayerVisible(i) {
