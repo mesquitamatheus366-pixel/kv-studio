@@ -70,6 +70,7 @@ tailwind.config = {
 <div id="dev-nav" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-full px-2 py-1.5 flex gap-1 text-xs">
   <button data-go="landing" class="nav-btn px-3 py-1.5 rounded-full">Início</button>
   <button data-go="repositorio" class="nav-btn px-3 py-1.5 rounded-full">Repositório</button>
+  <button data-go="editor" class="nav-btn px-3 py-1.5 rounded-full">Editor</button>
   <button data-go="brand" class="nav-btn px-3 py-1.5 rounded-full">Brand</button>
   <button data-go="formatos" class="nav-btn px-3 py-1.5 rounded-full">Formatos</button>
   <button data-go="wireframe" class="nav-btn px-3 py-1.5 rounded-full">Wireframe</button>
@@ -77,13 +78,29 @@ tailwind.config = {
   <button data-go="aprovacao" class="nav-btn px-3 py-1.5 rounded-full">Aprovação</button>
 </div>
 
-<!-- =========== BOTTOM RIGHT: THEME =========== -->
+<!-- =========== BOTTOM RIGHT: BELL + THEME =========== -->
+<button id="notif-toggle" onclick="toggleNotifs()" class="fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-900/90 glass shadow-glow border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-xl hover:scale-110 transition relative" title="Notificações">
+  <span>🔔</span>
+  <span id="notif-badge" class="hidden absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">0</span>
+</button>
 <button id="theme-toggle" onclick="toggleTheme()" class="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-900/90 glass shadow-glow border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-xl hover:scale-110 transition" title="Alternar tema">
   <span class="theme-icon-light">☀️</span>
   <span class="theme-icon-dark hidden">🌙</span>
 </button>
 
 <div id="toasts" class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] space-y-2"></div>
+
+<!-- DROPDOWN GLOBAL DE NOTIFICAÇÕES (compartilhado entre headers) -->
+<div id="notif-panel" class="hidden fixed bottom-20 right-20 z-50 w-96 max-h-[70vh] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl flex flex-col">
+  <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+    <h3 class="font-bold text-sm flex items-center gap-2">🔔 Notificações <span id="notif-unread-count" class="text-[10px] gradient-bg text-white px-1.5 rounded-full"></span></h3>
+    <button onclick="markAllRead()" class="text-xs gradient-text font-semibold hover:underline">Marcar todas como lidas</button>
+  </div>
+  <div id="notif-list" class="flex-1 overflow-auto"></div>
+  <div class="p-2 border-t border-zinc-200 dark:border-zinc-800 text-center">
+    <button onclick="clearNotifications()" class="text-xs text-zinc-500 hover:text-red-500 transition">Limpar todas</button>
+  </div>
+</div>
 
 <!-- =================================================== LANDING -->
 <div id="landing" class="screen active min-h-screen flex-col relative overflow-x-hidden">
@@ -295,6 +312,50 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- =================================================== EDITOR (KV master) -->
+<div id="editor" class="screen min-h-screen flex-col">
+  <header class="h-16 px-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <button onclick="back('editor')" class="w-10 h-10 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-lg transition" title="Voltar">←</button>
+      <div class="logo-slot"></div>
+      <span id="editor-breadcrumb" class="text-sm text-zinc-500 ml-2"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="show('brand')" class="px-3 py-1.5 rounded-lg text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">🎨 Brand kit</button>
+      <button onclick="advanceToFormatos()" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold">Avançar para formatos →</button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- canvas central -->
+    <main class="flex-1 bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center overflow-auto p-8 relative">
+      <div id="editor-canvas-wrap" class="relative max-w-full max-h-full"></div>
+      <!-- Controles flutuantes -->
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-900/95 glass border border-zinc-200 dark:border-zinc-800 rounded-full px-4 py-2 flex items-center gap-3 shadow-lg text-xs">
+        <button onclick="editorZoom(-0.1)" class="w-7 h-7 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">−</button>
+        <span id="editor-zoom-val" class="font-semibold w-12 text-center">100%</span>
+        <button onclick="editorZoom(0.1)" class="w-7 h-7 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">+</button>
+        <span class="w-px h-4 bg-zinc-300 dark:bg-zinc-700"></span>
+        <button onclick="resetEditorZoom()" class="hover:underline">Reset</button>
+      </div>
+    </main>
+
+    <!-- painel de camadas -->
+    <aside class="w-80 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col">
+      <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+        <h3 class="font-bold text-sm">Camadas</h3>
+        <button onclick="addEditorLayer()" class="text-xs gradient-text font-semibold hover:underline">+ camada</button>
+      </div>
+      <div id="editor-layers" class="flex-1 overflow-auto p-3 space-y-1.5"></div>
+      <div class="p-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+        <div class="text-[11px] uppercase font-bold text-zinc-500 tracking-wider">Próximo passo</div>
+        <button onclick="advanceToFormatos()" class="w-full btn-primary px-3 py-2.5 rounded-xl text-sm font-semibold">Selecionar formatos →</button>
+        <button onclick="show('brand')" class="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">Configurar brand kit</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
 <!-- =================================================== BRAND STUDIO -->
 <div id="brand" class="screen min-h-screen flex-col">
   <header class="h-16 px-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
@@ -425,7 +486,10 @@ tailwind.config = {
           <span class="flex items-center gap-2"><span class="st-revisado"></span>Revisado ok</span>
           <span class="flex items-center gap-2"><span class="st-ajuste"></span>Ajuste</span>
         </div>
-        <button onclick="show('aprovacao')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Enviar para aprovação →</button>
+        <div class="flex gap-2">
+          <button onclick="exportAllFormats()" class="px-4 py-2 rounded-xl border border-white/20 text-white text-sm font-semibold hover:bg-white/10 transition">↓ Exportar todos</button>
+          <button onclick="show('aprovacao')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Enviar para aprovação →</button>
+        </div>
       </div>
     </div>
 
@@ -680,7 +744,7 @@ const AI_RESPONSES = {
   'Aviso':    'Aviso sanitário em 22% da área inferior (acima do mínimo regulatório).',
 };
 
-const BACK_MAP = { repositorio:'landing', brand:'repositorio', formatos:'brand', wireframe:'formatos', revisao:'wireframe', aprovacao:'revisao' };
+const BACK_MAP = { repositorio:'landing', editor:'repositorio', brand:'editor', formatos:'editor', wireframe:'formatos', revisao:'wireframe', aprovacao:'revisao' };
 
 const state = {
   activeScreen: 'landing',
@@ -733,9 +797,116 @@ function loadPersisted() {
     if (data.approvalStatus)  state.approvalStatus  = data.approvalStatus;
     if (data.annotations)     state.annotations     = data.annotations;
     if (data.customFormats)   state.customFormats   = data.customFormats;
+    if (data.notifications)   state.notifications   = data.notifications;
   } catch(e) { console.warn('load falhou', e); }
 }
 loadPersisted();
+
+// ===== NOTIFICAÇÕES =====
+state.notifications = state.notifications || [];
+state.currentProject = null;
+
+function addNotification(type, title, body) {
+  const n = { id: 'n'+Date.now()+Math.random().toString(36).slice(2,5), type, title, body, ts: Date.now(), read: false };
+  state.notifications.unshift(n);
+  if (state.notifications.length > 50) state.notifications.pop();
+  persistAll();
+  renderNotifs();
+}
+
+function persistAll() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      projetos: state.projetos, clientes: state.clientes,
+      revisaoStatus: state.revisaoStatus, approvalStatus: state.approvalStatus,
+      annotations: state.annotations, customFormats: state.customFormats,
+      notifications: state.notifications,
+    }));
+  } catch(e) { console.warn(e); }
+}
+const oldPersist = window.persist || (()=>{});
+window.persist = persistAll; // sobrescreve antigo
+
+function toggleNotifs() {
+  const p = document.getElementById('notif-panel');
+  p.classList.toggle('hidden');
+  if (!p.classList.contains('hidden')) renderNotifs();
+}
+
+function renderNotifs() {
+  const list = document.getElementById('notif-list');
+  const badge = document.getElementById('notif-badge');
+  const count = document.getElementById('notif-unread-count');
+  const unread = state.notifications.filter(n => !n.read).length;
+  if (unread > 0) {
+    badge.classList.remove('hidden');
+    badge.textContent = unread > 9 ? '9+' : unread;
+    count.textContent = unread;
+    count.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+    count.classList.add('hidden');
+  }
+  if (state.notifications.length === 0) {
+    list.innerHTML = '<div class="p-8 text-center text-sm text-zinc-500">Nenhuma notificação ainda.<br>Comece criando um projeto.</div>';
+    return;
+  }
+  list.innerHTML = state.notifications.map(n => {
+    const ago = relativeTime(n.ts);
+    const icon = NOTIF_ICONS[n.type] || '🔔';
+    return `
+      <button onclick="markRead('${n.id}')" class="w-full text-left p-3 border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition flex items-start gap-3 ${n.read?'opacity-60':''}">
+        <span class="text-xl shrink-0 mt-0.5">${icon}</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold leading-tight">${n.title}</p>
+          <p class="text-xs text-zinc-500 mt-1 leading-relaxed">${n.body}</p>
+          <p class="text-[10px] text-zinc-400 mt-1.5">${ago}</p>
+        </div>
+        ${!n.read?'<span class="w-2 h-2 rounded-full gradient-bg shrink-0 mt-2"></span>':''}
+      </button>
+    `;
+  }).join('');
+}
+
+const NOTIF_ICONS = {
+  project_created: '📁', upload: '📤', psd_parsed: '🔍',
+  format_exported: '📦', approved: '✅', reproved: '✗',
+  comment: '💬', revisora_ok: '🩷', revisora_ajuste: '🌸',
+  client_added: '👤', deleted: '🗑️',
+};
+
+function markRead(id) {
+  const n = state.notifications.find(x=>x.id===id);
+  if (n) { n.read = true; persistAll(); renderNotifs(); }
+}
+function markAllRead() {
+  state.notifications.forEach(n => n.read = true);
+  persistAll(); renderNotifs();
+  toast('Todas marcadas como lidas');
+}
+function clearNotifications() {
+  if (!confirm('Limpar todas as notificações?')) return;
+  state.notifications = [];
+  persistAll(); renderNotifs();
+}
+
+function relativeTime(ts) {
+  const diff = (Date.now() - ts) / 1000;
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `${Math.floor(diff/60)} min atrás`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h atrás`;
+  return `${Math.floor(diff/86400)}d atrás`;
+}
+
+// Fecha painel ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('#notif-panel') && !e.target.closest('#notif-toggle')) {
+    document.getElementById('notif-panel').classList.add('hidden');
+  }
+});
+
+// Render inicial
+setTimeout(renderNotifs, 100);
 
 // ===== NOVO CLIENTE =====
 function openNewClient() {
@@ -760,9 +931,10 @@ function saveNewClient() {
   if (!name) { toast('Digite um nome'); return; }
   const id = 'c'+Date.now();
   state.clientes.push({ id, name, color: state.newClientColor });
-  persist();
+  persistAll();
   closeNewClient();
   renderRepositorio();
+  addNotification('client_added', 'Novo cliente cadastrado', `"${name}" foi adicionado aos seus clientes.`);
   toast(`Cliente "${name}" adicionado`);
 }
 
@@ -808,9 +980,9 @@ function createProjectFromScratch() {
   const clienteId = document.getElementById('np-cliente').value;
   const cliente = state.clientes.find(c => c.id === clienteId);
   if (!cliente) { toast('Selecione um cliente'); return; }
-  createProject({ cliente, campanha, source: 'do_zero' });
+  const proj = createProject({ cliente, campanha, source: 'do_zero', layers: [] });
   closeNewProject();
-  show('brand');
+  openProject(proj.id);
 }
 
 function createProject({ cliente, campanha, source, layers }) {
@@ -836,9 +1008,11 @@ function createProject({ cliente, campanha, source, layers }) {
     createdAt: Date.now(),
   };
   state.projetos.unshift(proj);
-  persist();
+  persistAll();
   renderRepositorio();
   toast(`Projeto "${campanha}" criado`);
+  addNotification('project_created', 'Novo projeto criado',
+    `${campanha} (${cliente.name}) foi criado com sucesso${source==='psd'?' a partir de PSD':''}.`);
   state.uploadedFile = null;
   return proj;
 }
@@ -1001,18 +1175,184 @@ function addEmptyLayer() {
 }
 function confirmPSDLayers() {
   if (state.psdLayers.length === 0) return;
-  // Pega cliente/campanha do form (que ficou aberto antes)
   const clienteId = document.getElementById('np-cliente')?.value;
   const campanha = document.getElementById('np-campanha')?.value?.trim() || (state.uploadedFile?.name?.replace(/\.[^.]+$/,'') ?? 'Sem nome');
   const cliente = state.clientes.find(c => c.id === clienteId) || state.clientes[0];
-  createProject({
+  const proj = createProject({
     cliente,
     campanha,
     source: 'psd',
-    layers: state.psdLayers.map(l => ({ ...l })),
+    layers: state.psdLayers.map((l, i) => ({ ...l, visible: true, idx: i })),
   });
+  addNotification('psd_parsed', 'PSD analisado',
+    `${state.psdLayers.length} camadas identificadas em "${campanha}"`);
   closePSDReview();
-  show('brand');
+  openProject(proj.id);
+}
+
+// ===== EDITOR =====
+state.editorZoom = 1;
+
+function openProject(id) {
+  const p = state.projetos.find(x => x.id === id);
+  if (!p) return;
+  state.currentProject = p;
+  // garante visible=true em todas as camadas
+  if (Array.isArray(p.layers)) p.layers.forEach(l => { if (l.visible === undefined) l.visible = true; });
+  state.editorZoom = 1;
+  show('editor');
+}
+
+function renderEditor() {
+  const p = state.currentProject;
+  if (!p) {
+    // sem projeto aberto, força usuário a abrir um
+    document.getElementById('editor-canvas-wrap').innerHTML = `
+      <div class="text-center p-10">
+        <div class="text-5xl mb-4">📂</div>
+        <h3 class="font-bold text-lg mb-2">Nenhum projeto aberto</h3>
+        <p class="text-sm text-zinc-500 mb-6">Abra um projeto do repositório para começar a editar.</p>
+        <button onclick="show('repositorio')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Ir ao repositório</button>
+      </div>
+    `;
+    document.getElementById('editor-layers').innerHTML = '';
+    document.getElementById('editor-breadcrumb').textContent = '';
+    return;
+  }
+  document.getElementById('editor-breadcrumb').textContent = `${p.cliente} · ${p.nome} · Editor`;
+
+  const wrap = document.getElementById('editor-canvas-wrap');
+  const z = state.editorZoom;
+  document.getElementById('editor-zoom-val').textContent = `${Math.round(z*100)}%`;
+
+  if (p.file?.dataUrl) {
+    // imagem real
+    wrap.innerHTML = `
+      <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
+        <img src="${p.file.dataUrl}" id="editor-img" class="block max-w-[800px] max-h-[600px] w-auto h-auto" alt="${p.nome}" />
+        <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
+      </div>
+    `;
+    renderLayerOverlays();
+  } else {
+    // sem imagem (criado do zero)
+    wrap.innerHTML = `
+      <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
+        <div class="w-[600px] h-[450px] flex items-center justify-center bg-gradient-to-br ${p.grad} text-white text-sm">Canvas em branco — adicione camadas pelo painel direito</div>
+      </div>
+    `;
+  }
+  renderEditorLayers();
+}
+
+function renderLayerOverlays() {
+  // Desenha contornos sutis para representar onde cada camada estaria (mockado por ordem)
+  const overlays = document.getElementById('editor-overlays');
+  if (!overlays) return;
+  const p = state.currentProject;
+  const visibles = (p.layers||[]).filter(l => l.visible !== false);
+  const img = document.getElementById('editor-img');
+  if (!img) return;
+  // Posições mockadas por categoria (porcentagens)
+  const POS = {
+    Logo:        { x: 5,  y: 5,  w: 18, h: 10 },
+    Headline:    { x: 8,  y: 60, w: 84, h: 12 },
+    Subheadline: { x: 8,  y: 74, w: 60, h: 7 },
+    Hero:        { x: 0,  y: 0,  w: 100, h: 60 },
+    Mascote:     { x: 30, y: 18, w: 40, h: 50 },
+    Produto:     { x: 25, y: 25, w: 50, h: 50 },
+    Fundo:       { x: 0,  y: 0,  w: 100, h: 100 },
+    CTA:         { x: 8,  y: 84, w: 25, h: 8 },
+    Legal:       { x: 8,  y: 94, w: 84, h: 4 },
+    Outro:       { x: 40, y: 40, w: 20, h: 20 },
+  };
+  overlays.innerHTML = visibles.map(l => {
+    const pos = POS[l.category] || POS.Outro;
+    return `
+      <div class="absolute border-2 border-dashed rounded transition" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%; border-color: rgba(139,92,246,.5); background: rgba(139,92,246,.05)">
+        <span class="absolute -top-5 left-0 text-[9px] bg-brand-600 text-white px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">${l.name}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderEditorLayers() {
+  const p = state.currentProject;
+  const list = document.getElementById('editor-layers');
+  if (!p || !p.layers || p.layers.length === 0) {
+    list.innerHTML = '<p class="text-xs text-zinc-500 text-center py-6">Nenhuma camada.<br>Adicione uma para começar.</p>';
+    return;
+  }
+  list.innerHTML = p.layers.map((l, i) => {
+    const cat = LAYER_CATEGORIES.find(c => c.key === l.category) || LAYER_CATEGORIES[LAYER_CATEGORIES.length-1];
+    const visible = l.visible !== false;
+    return `
+      <div class="group rounded-xl border border-zinc-200 dark:border-zinc-800 ${visible?'bg-white dark:bg-zinc-900':'bg-zinc-100 dark:bg-zinc-800/50 opacity-60'} hover:border-brand-400 transition">
+        <div class="p-2.5 flex items-center gap-2">
+          <button onclick="toggleLayerVisible(${i})" class="w-7 h-7 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-sm" title="${visible?'Esconder':'Mostrar'}">${visible?'👁':'🙈'}</button>
+          <span class="w-7 h-7 rounded-md flex items-center justify-center text-sm shrink-0" style="background: var(--gradient-soft)">${cat.icon}</span>
+          <input value="${(l.name||'').replace(/"/g,'&quot;')}" oninput="updateEditorLayerName(${i}, this.value)" class="flex-1 min-w-0 bg-transparent border-none text-xs font-medium focus:outline-none focus:bg-zinc-50 dark:focus:bg-zinc-950 rounded px-1.5 py-1" />
+          <button onclick="moveLayer(${i}, -1)" ${i===0?'disabled':''} class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs disabled:opacity-30 disabled:cursor-not-allowed" title="Subir">↑</button>
+          <button onclick="moveLayer(${i}, 1)" ${i===p.layers.length-1?'disabled':''} class="w-6 h-6 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs disabled:opacity-30 disabled:cursor-not-allowed" title="Descer">↓</button>
+          <button onclick="removeEditorLayer(${i})" class="w-6 h-6 rounded hover:bg-red-50 dark:hover:bg-red-950/50 text-zinc-400 hover:text-red-500 text-xs">×</button>
+        </div>
+        <div class="px-2.5 pb-2 flex items-center gap-1.5">
+          <select onchange="updateEditorLayerCategory(${i}, this.value)" class="flex-1 text-[10px] border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded px-1.5 py-1 focus:outline-none">
+            ${LAYER_CATEGORIES.map(c => `<option value="${c.key}" ${c.key===l.category?'selected':''}>${c.icon} ${c.key}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleLayerVisible(i) {
+  const p = state.currentProject; if (!p?.layers?.[i]) return;
+  p.layers[i].visible = p.layers[i].visible === false ? true : false;
+  persistAll(); renderEditor();
+}
+function updateEditorLayerName(i, name) {
+  const p = state.currentProject; if (!p?.layers?.[i]) return;
+  p.layers[i].name = name;
+  persistAll();
+  // só re-renderiza overlays (não destrói foco do input)
+  renderLayerOverlays();
+}
+function updateEditorLayerCategory(i, cat) {
+  const p = state.currentProject; if (!p?.layers?.[i]) return;
+  p.layers[i].category = cat;
+  persistAll(); renderEditor();
+}
+function moveLayer(i, dir) {
+  const p = state.currentProject; if (!p?.layers) return;
+  const j = i + dir;
+  if (j < 0 || j >= p.layers.length) return;
+  [p.layers[i], p.layers[j]] = [p.layers[j], p.layers[i]];
+  persistAll(); renderEditor();
+}
+function removeEditorLayer(i) {
+  const p = state.currentProject; if (!p?.layers) return;
+  const l = p.layers[i];
+  if (!confirm(`Remover camada "${l.name}"?`)) return;
+  p.layers.splice(i, 1);
+  persistAll(); renderEditor();
+  toast('Camada removida');
+}
+function addEditorLayer() {
+  const p = state.currentProject; if (!p) return;
+  if (!p.layers) p.layers = [];
+  p.layers.push({ id:'l'+Date.now(), original:'(manual)', name:'Nova camada', category:'Outro', visible:true });
+  persistAll(); renderEditor();
+}
+function editorZoom(d) {
+  state.editorZoom = Math.max(0.5, Math.min(2, state.editorZoom + d));
+  renderEditor();
+}
+function resetEditorZoom() { state.editorZoom = 1; renderEditor(); }
+
+function advanceToFormatos() {
+  if (!state.currentProject) { show('formatos'); return; }
+  show('formatos');
 }
 
 function deleteProject(id) {
@@ -1020,8 +1360,10 @@ function deleteProject(id) {
   if (!p) return;
   if (!confirm(`Excluir o projeto "${p.nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
   state.projetos = state.projetos.filter(x => x.id !== id);
-  persist();
+  if (state.currentProject?.id === id) state.currentProject = null;
+  persistAll();
   renderRepositorio();
+  addNotification('deleted', 'Projeto excluído', `"${p.nome}" foi removido permanentemente.`);
   toast(`Projeto "${p.nome}" excluído`);
 }
 
@@ -1065,6 +1407,7 @@ function show(id) {
   state.activeScreen = id;
   window.scrollTo(0,0);
   if (id==='repositorio') renderRepositorio();
+  if (id==='editor') renderEditor();
   if (id==='brand') renderBrand();
   if (id==='formatos') renderFormatos();
   if (id==='wireframe') renderWireframe();
@@ -1127,7 +1470,7 @@ function renderRepositorio() {
     const thumb = p.file?.dataUrl;
     return `
     <div class="group relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-glow hover:border-brand-400/50 transition-all overflow-hidden">
-      <button onclick="show('brand'); toast('Abrindo: ${p.nome.replace(/'/g,'&apos;')}')" class="block w-full text-left">
+      <button onclick="openProject('${p.id}')" class="block w-full text-left">
         <div class="aspect-[4/3] ${thumb?'bg-zinc-100 dark:bg-zinc-950':'bg-gradient-to-br '+p.grad} relative overflow-hidden">
           ${thumb ? `<img src="${thumb}" class="absolute inset-0 w-full h-full object-cover" alt="${p.nome}" />` : ''}
           <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
@@ -1149,7 +1492,7 @@ function renderRepositorio() {
         <div class="relative">
           <button onclick="toggleProjectMenu('${p.id}', event)" class="w-8 h-8 rounded-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 shadow-md" title="Mais opções">⋯</button>
           <div id="menu-${p.id}" class="hidden absolute top-10 right-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 min-w-[160px] z-10">
-            <button onclick="show('brand'); toast('Abrindo: ${p.nome}')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📂 Abrir</button>
+            <button onclick="openProject('${p.id}')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📂 Abrir</button>
             <button onclick="toast('Renomear (mock)')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">✏️ Renomear</button>
             <button onclick="toast('Duplicar (mock)')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📋 Duplicar</button>
             <div class="h-px bg-zinc-200 dark:bg-zinc-800 my-1"></div>
@@ -1429,17 +1772,25 @@ function removeAnnotation(formatId, element) {
 
 // REVISÃO
 function renderRevisao() {
-  const formats = FORMATS.slice(0, 8);
+  // Mostra formatos selecionados pelo usuário; se nenhum, mostra os 5 sugeridos
+  const ids = state.selectedFormats && state.selectedFormats.length ? state.selectedFormats : FORMATS.filter(f=>f.suggested).map(f=>f.id);
+  const formats = ids.map(id => FORMATS.find(f=>f.id===id) || state.customFormats.find(f=>f.id===id)).filter(Boolean);
+  const hasImage = !!state.currentProject?.file?.dataUrl;
   document.getElementById('revisao-grid').innerHTML = formats.map(f=>{
     const aspect = f.w / f.h;
-    const W = aspect > 2 ? 260 : aspect > 0.8 ? 180 : 140;
+    const W = aspect > 2 ? 280 : aspect > 0.8 ? 200 : 150;
     const H = W / aspect;
-    const st = state.revisaoStatus[f.id];
+    const st = state.revisaoStatus[f.id] || 'em_producao';
     const isSel = state.selectedRevisao === f.id;
+    const preview = hasImage
+      ? `<img src="${state.currentProject.file.dataUrl}" class="absolute inset-0 w-full h-full object-cover" alt="" />`
+      : '';
     return `
       <div onclick="selectRevisao('${f.id}')" class="group relative cursor-pointer transition ${isSel?'ring-2 ring-brand-400 ring-offset-4 ring-offset-transparent rounded-lg shadow-glow-lg':''}">
-        <div class="bg-gradient-to-br from-violet-400 via-fuchsia-400 to-pink-400 rounded-lg overflow-hidden" style="width:${W}px;height:${H}px">
-          <div class="p-2 text-[10px] text-white/90 font-medium">${f.w}×${f.h}</div>
+        <div class="relative bg-gradient-to-br from-violet-400 via-fuchsia-400 to-pink-400 rounded-lg overflow-hidden" style="width:${W}px;height:${H}px">
+          ${preview}
+          <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+          <div class="absolute top-1.5 left-2 text-[10px] text-white/90 font-medium px-1.5 py-0.5 bg-black/40 backdrop-blur rounded">${f.w}×${f.h}</div>
         </div>
         <div class="mt-2 flex items-center justify-between text-xs">
           <span class="text-white/70 text-[10px] font-medium">${f.label}</span>
@@ -1450,8 +1801,8 @@ function renderRevisao() {
         </div>
         <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1.5">
           <button onclick="event.stopPropagation(); toast('Comentar IA — ${f.label}')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80">💬</button>
-          <button onclick="event.stopPropagation(); toast('Editor manual abriria aqui')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80">✏️</button>
-          <button onclick="event.stopPropagation(); toast('Exportando ${f.w}×${f.h}')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80">↓</button>
+          <button onclick="event.stopPropagation(); show('editor')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80" title="Editar manualmente">✏️</button>
+          <button onclick="event.stopPropagation(); exportFormat('${f.id}')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80" title="Exportar PNG">↓</button>
         </div>
       </div>
     `;
@@ -1479,14 +1830,69 @@ function renderRevisao() {
         <button onclick="toast('IA processando...')" class="mt-2 w-full btn-primary px-3 py-2 rounded-xl text-xs font-semibold">🤖 Pedir ajuste à IA</button>
       </section>
       <section class="space-y-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-        <button onclick="toast('Editor manual abriria aqui')" class="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">✏️ Editar manualmente</button>
-        <button onclick="toast('Exportando ${sel.w}×${sel.h}')" class="w-full btn-primary px-3 py-2.5 rounded-xl text-sm font-semibold">↓ Exportar este formato</button>
+        <button onclick="show('editor')" class="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">✏️ Editar manualmente</button>
+        <button onclick="exportFormat('${sel.id}')" class="w-full btn-primary px-3 py-2.5 rounded-xl text-sm font-semibold">↓ Exportar este formato</button>
       </section>
     </div>
   `;
 }
 
 function selectRevisao(id) { state.selectedRevisao = id; renderRevisao(); }
+
+// Gera PNG real usando canvas (object-fit cover) e dispara download
+function exportFormat(formatId) {
+  const f = FORMATS.find(x=>x.id===formatId) || state.customFormats.find(x=>x.id===formatId);
+  if (!f) return;
+  const p = state.currentProject;
+  if (!p?.file?.dataUrl) {
+    toast('Abra um projeto com imagem para exportar');
+    return;
+  }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = f.w;
+    canvas.height = f.h;
+    const ctx = canvas.getContext('2d');
+    // cover: cobre o canvas mantendo proporção, recorta sobra
+    const targetRatio = f.w / f.h;
+    const imgRatio = img.width / img.height;
+    let sx, sy, sw, sh;
+    if (imgRatio > targetRatio) {
+      // imagem mais larga: corta laterais
+      sh = img.height;
+      sw = img.height * targetRatio;
+      sx = (img.width - sw) / 2;
+      sy = 0;
+    } else {
+      // imagem mais alta: corta topo/base
+      sw = img.width;
+      sh = img.width / targetRatio;
+      sx = 0;
+      sy = (img.height - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, f.w, f.h);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${p.nome.replace(/[^a-z0-9-_]/gi,'_')}_${f.w}x${f.h}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addNotification('format_exported', 'Formato exportado',
+        `${f.label} (${f.w}×${f.h}) baixado para o seu computador.`);
+      toast(`Exportado: ${f.w}×${f.h}`);
+    }, 'image/png');
+  };
+  img.src = p.file.dataUrl;
+}
+
+function exportAllFormats() {
+  const ids = state.selectedFormats && state.selectedFormats.length ? state.selectedFormats : FORMATS.filter(f=>f.suggested).map(f=>f.id);
+  if (!state.currentProject?.file?.dataUrl) { toast('Abra um projeto com imagem para exportar'); return; }
+  ids.forEach((id, i) => setTimeout(() => exportFormat(id), i * 200));
+}
 
 function applyGlobalAI() {
   const text = document.getElementById('global-ai').value.trim();
@@ -1575,12 +1981,18 @@ function selectApproval(id) { state.selectedApproval = id; renderAprovacao(); }
 function setRole(r) { state.approvalRole = r; renderAprovacao(); toast(`Visualizando como ${r==='senior'?'sênior':'revisora'}`); }
 function setApprovalStatus(s) {
   state.approvalStatus[state.selectedApproval] = s;
+  persistAll();
   renderAprovacao();
+  const f = FORMATS.find(x=>x.id===state.selectedApproval);
+  const type = s==='aprovado'?'approved':s==='editado'?'reproved':s==='revisado_ok'?'revisora_ok':'revisora_ajuste';
+  addNotification(type, `${STATUS_INFO[s].label}`, `Formato ${f?.w}×${f?.h} (${f?.label}) marcado por você.`);
   toast(`Status: ${STATUS_INFO[s].label}`);
 }
 function approveAll() {
   Object.keys(state.approvalStatus).forEach(k=>state.approvalStatus[k]='aprovado');
+  persistAll();
   renderAprovacao();
+  addNotification('approved', 'Aprovação em massa', 'Todos os formatos do projeto foram aprovados.');
   toast('Todos os formatos aprovados ✨');
 }
 
