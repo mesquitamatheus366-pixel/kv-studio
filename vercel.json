@@ -1,4 +1,8 @@
 {
+  "buildCommand": "echo skip-build",
+  "installCommand": "echo skip-install",
+  "outputDirectory": ".",
+  "framework": null,
   "cleanUrls": true,
   "trailingSlash": false
 }

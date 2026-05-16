@@ -1,0 +1,7 @@
+apps/
+packages/
+package.json
+pnpm-workspace.yaml
+preview.html
+kv-studio-compactacao_v2.md
+instalar-skills.md
