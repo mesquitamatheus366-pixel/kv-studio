@@ -1,0 +1,18 @@
+{
+  "name": "kv-studio",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Plataforma de desdobramento inteligente de key visuals",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
