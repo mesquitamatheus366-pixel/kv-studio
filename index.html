@@ -67,17 +67,23 @@ tailwind.config = {
 <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors">
 
 <!-- =========== TOP RIGHT CONTROLS =========== -->
-<div class="fixed top-3 right-3 z-50 flex items-center gap-2">
-  <div id="dev-nav" class="bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex gap-1 text-xs">
-    <button data-go="landing" class="nav-btn px-3 py-1.5 rounded-lg">Início</button>
-    <button data-go="repositorio" class="nav-btn px-3 py-1.5 rounded-lg">Repositório</button>
-    <button data-go="brand" class="nav-btn px-3 py-1.5 rounded-lg">Brand</button>
-    <button data-go="formatos" class="nav-btn px-3 py-1.5 rounded-lg">Formatos</button>
-    <button data-go="wireframe" class="nav-btn px-3 py-1.5 rounded-lg">Wireframe</button>
-    <button data-go="revisao" class="nav-btn px-3 py-1.5 rounded-lg">Revisão</button>
-    <button data-go="aprovacao" class="nav-btn px-3 py-1.5 rounded-lg">Aprovação</button>
+<div id="top-controls" class="fixed top-3 right-3 z-50 flex items-center gap-2">
+  <!-- dev-nav recolhível (botão menu + dropdown) -->
+  <div id="dev-nav-wrap" class="relative">
+    <button id="dev-nav-btn" onclick="toggleDevNav()" class="w-10 h-10 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition" title="Navegar entre telas">
+      <span>☰</span>
+    </button>
+    <div id="dev-nav-menu" class="hidden absolute top-12 right-0 bg-white/95 dark:bg-zinc-900/95 glass shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex flex-col gap-1 text-xs min-w-[160px]">
+      <button data-go="landing" class="nav-btn text-left px-3 py-2 rounded-lg">Início</button>
+      <button data-go="repositorio" class="nav-btn text-left px-3 py-2 rounded-lg">Repositório</button>
+      <button data-go="brand" class="nav-btn text-left px-3 py-2 rounded-lg">Brand Studio</button>
+      <button data-go="formatos" class="nav-btn text-left px-3 py-2 rounded-lg">Formatos</button>
+      <button data-go="wireframe" class="nav-btn text-left px-3 py-2 rounded-lg">Wireframe</button>
+      <button data-go="revisao" class="nav-btn text-left px-3 py-2 rounded-lg">Revisão</button>
+      <button data-go="aprovacao" class="nav-btn text-left px-3 py-2 rounded-lg">Aprovação</button>
+    </div>
   </div>
-  <button id="theme-toggle" onclick="toggleTheme()" class="w-10 h-10 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition">
+  <button id="theme-toggle" onclick="toggleTheme()" class="w-10 h-10 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition" title="Alternar tema">
     <span class="theme-icon-light">☀️</span>
     <span class="theme-icon-dark hidden">🌙</span>
   </button>
@@ -91,97 +97,32 @@ tailwind.config = {
   <div class="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl" style="background: radial-gradient(circle, #8b5cf6 0%, transparent 70%)"></div>
   <div class="absolute -bottom-40 -right-40 w-[700px] h-[700px] rounded-full opacity-30 blur-3xl" style="background: radial-gradient(circle, #c026d3 0%, transparent 70%)"></div>
 
-  <!-- top nav -->
+  <!-- top nav minimalista -->
   <header class="relative z-10 h-20 px-10 flex items-center justify-between">
     <div class="logo-slot"></div>
-    <nav class="hidden md:flex items-center gap-8 text-sm text-zinc-600 dark:text-zinc-400">
-      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Produto</a>
-      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Como funciona</a>
-      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Preços</a>
-      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Contato</a>
-    </nav>
-    <div class="flex items-center gap-3">
-      <button onclick="show('repositorio')" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">Entrar</button>
-      <button onclick="show('repositorio')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Começar grátis</button>
-    </div>
+    <button onclick="show('repositorio')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Entrar no app</button>
   </header>
 
   <!-- hero -->
-  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-10 text-center max-w-5xl mx-auto w-full">
+  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-10 text-center max-w-4xl mx-auto w-full pb-20">
     <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-300 dark:border-brand-700 bg-brand-50/50 dark:bg-brand-950/50 backdrop-blur text-xs font-medium mb-8">
       <span class="w-2 h-2 rounded-full gradient-bg animate-pulse"></span>
-      <span>Powered by Claude Vision · MVP em construção</span>
+      <span>Powered by Claude Vision</span>
     </div>
 
-    <h1 class="text-6xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
+    <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
       Desdobre <span class="gradient-text">key visuals</span><br>
-      com inteligência de direção de arte
+      com inteligência
     </h1>
 
-    <p class="text-lg md:text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed mb-10">
-      A plataforma que automatiza a adaptação de peças em múltiplos formatos digitais —
-      preservando hierarquia visual, regras de marca e leitura de cada peça.
-      <strong class="text-zinc-900 dark:text-white">Para agências que entregam rápido sem perder qualidade.</strong>
+    <p class="text-lg text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed mb-10">
+      A plataforma que adapta peças para múltiplos formatos automaticamente — preservando hierarquia visual e regras de marca.
     </p>
 
-    <div class="flex items-center gap-3 mb-16">
-      <button onclick="show('repositorio')" class="btn-primary px-7 py-3.5 rounded-xl text-base font-semibold">
-        Entrar no app →
-      </button>
-      <button onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" class="px-7 py-3.5 rounded-xl text-base font-semibold border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition">
-        Como funciona
-      </button>
-    </div>
-
-    <!-- proof bar -->
-    <div class="flex items-center gap-8 text-xs text-zinc-500 mb-4">
-      <span class="flex items-center gap-2"><span class="gradient-text font-bold">✓</span> Sem ferramenta de design</span>
-      <span class="flex items-center gap-2"><span class="gradient-text font-bold">✓</span> Aprovação integrada</span>
-      <span class="flex items-center gap-2"><span class="gradient-text font-bold">✓</span> PSD ou do zero</span>
-    </div>
+    <button onclick="show('repositorio')" class="btn-primary px-7 py-3.5 rounded-xl text-base font-semibold">
+      Entrar no app →
+    </button>
   </main>
-
-  <!-- features -->
-  <section id="features" class="relative z-10 px-10 py-20 max-w-6xl mx-auto w-full">
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
-        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">🤖</div>
-        <h3 class="font-bold text-lg mb-2">IA que dialoga, não chuta</h3>
-        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          A IA gera wireframes anotados antes de qualquer pixel. Você corrige a intenção em linguagem natural — ela confirma e só então gera.
-        </p>
-      </div>
-
-      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
-        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">🎨</div>
-        <h3 class="font-bold text-lg mb-2">Brand Studio integrado</h3>
-        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          Logo, tipografia, paleta com papéis e regras de marca. A IA consulta o brand kit em todo desdobramento.
-        </p>
-      </div>
-
-      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
-        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">✅</div>
-        <h3 class="font-bold text-lg mb-2">Aprovação que não trava</h3>
-        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          Designer pode exportar sem ok do sênior. Aprovação retroativa, revisora separada, status com bolinhas coloridas.
-        </p>
-      </div>
-    </div>
-
-    <div class="mt-16 text-center">
-      <p class="text-sm text-zinc-500 mb-4">Pronto para experimentar?</p>
-      <button onclick="show('repositorio')" class="btn-primary px-8 py-3.5 rounded-xl text-base font-semibold">
-        Entrar no app agora →
-      </button>
-    </div>
-  </section>
-
-  <!-- footer -->
-  <footer class="relative z-10 border-t border-zinc-200 dark:border-zinc-800 px-10 py-6 flex items-center justify-between text-xs text-zinc-500">
-    <span>© 2026 kv.studio · Protótipo navegável</span>
-    <span>Feito com 💜 por Matheus Mesquita</span>
-  </footer>
 </div>
 
 <!-- =================================================== REPOSITÓRIO -->
@@ -619,6 +560,16 @@ function show(id) {
 }
 
 function back(currentId) { show(BACK_MAP[currentId] || 'repositorio'); }
+
+function toggleDevNav() {
+  document.getElementById('dev-nav-menu').classList.toggle('hidden');
+}
+// fecha dev-nav ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('#dev-nav-wrap')) {
+    document.getElementById('dev-nav-menu').classList.add('hidden');
+  }
+});
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-go]');
