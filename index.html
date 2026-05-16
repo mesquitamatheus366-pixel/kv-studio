@@ -259,7 +259,7 @@ tailwind.config = {
       <div>
         <div class="flex items-center justify-between px-3 mb-2">
           <h3 class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Clientes</h3>
-          <button onclick="toast('Novo cliente')" class="text-xs gradient-text font-semibold">+ novo</button>
+          <button onclick="openNewClient()" class="text-xs gradient-text font-semibold hover:underline">+ novo</button>
         </div>
         <div id="clientes-list" class="space-y-0.5"></div>
       </div>
@@ -490,17 +490,54 @@ tailwind.config = {
   <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 border border-zinc-200 dark:border-zinc-800" onclick="event.stopPropagation()">
     <h3 class="font-bold text-lg">Novo projeto</h3>
     <div class="space-y-3 text-sm">
-      <div><label class="block text-xs text-zinc-500 mb-1.5 font-medium">Cliente</label><select class="w-full border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-xl px-3 py-2"><option>Marlboro</option><option>Natura</option><option>Itaú</option></select></div>
-      <div><label class="block text-xs text-zinc-500 mb-1.5 font-medium">Nome da campanha</label><input placeholder="ex: Verão 2026" class="w-full border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-xl px-3 py-2"></div>
-      <div><label class="block text-xs text-zinc-500 mb-1.5 font-medium">Modo de início</label>
+      <div>
+        <label class="block text-xs text-zinc-500 mb-1.5 font-medium">Cliente *</label>
+        <select id="np-cliente" class="w-full border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+      </div>
+      <div>
+        <label class="block text-xs text-zinc-500 mb-1.5 font-medium">Nome da campanha *</label>
+        <input id="np-campanha" placeholder="ex: Verão 2026" class="w-full border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </div>
+      <div>
+        <label class="block text-xs text-zinc-500 mb-1.5 font-medium">Modo de início *</label>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="openPSDReview()" class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-950/30 transition text-sm group"><div class="text-xl mb-1 group-hover:scale-110 transition">📄</div>Upload PSD</button>
-          <button onclick="closeNewProject(); show('brand'); toast('Projeto vazio criado')" class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-950/30 transition text-sm group"><div class="text-xl mb-1 group-hover:scale-110 transition">✏️</div>Criar do zero</button>
+          <button onclick="triggerPSDUpload()" class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-950/30 transition text-sm group">
+            <div class="text-xl mb-1 group-hover:scale-110 transition">📄</div>Upload PSD/imagem
+            <div class="text-[10px] text-zinc-400 mt-0.5">.psd .png .jpg</div>
+          </button>
+          <button onclick="createProjectFromScratch()" class="border-2 border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-2 hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-950/30 transition text-sm group">
+            <div class="text-xl mb-1 group-hover:scale-110 transition">✏️</div>Criar do zero
+            <div class="text-[10px] text-zinc-400 mt-0.5">Editor em branco</div>
+          </button>
         </div>
       </div>
     </div>
     <div class="flex justify-end gap-2 pt-2">
       <button onclick="closeNewProject()" class="px-4 py-2 rounded-xl text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- INPUT REAL DE ARQUIVO (escondido) -->
+<input type="file" id="psd-file-input" accept=".psd,image/png,image/jpeg,image/jpg,image/webp" class="hidden" />
+
+<!-- MODAL NOVO CLIENTE -->
+<div id="new-client-modal" class="hidden fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+  <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 border border-zinc-200 dark:border-zinc-800" onclick="event.stopPropagation()">
+    <h3 class="font-bold text-lg">Novo cliente</h3>
+    <div class="space-y-3 text-sm">
+      <div>
+        <label class="block text-xs text-zinc-500 mb-1.5 font-medium">Nome do cliente *</label>
+        <input id="nc-name" placeholder="ex: Coca-Cola" class="w-full border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-xs text-zinc-500 mb-1.5 font-medium">Cor (identificação visual)</label>
+        <div id="nc-color-picker" class="flex gap-2 flex-wrap"></div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2">
+      <button onclick="closeNewClient()" class="px-4 py-2 rounded-xl text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">Cancelar</button>
+      <button onclick="saveNewClient()" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold">Adicionar cliente</button>
     </div>
   </div>
 </div>
@@ -552,11 +589,13 @@ const STATUS_INFO = {
   revisora_ajuste: { cls: 'st-ajuste',   label: 'Revisora: ajuste' },
 };
 
-const CLIENTES = [
-  { id:'c1', name:'Marlboro', count:3 },
-  { id:'c2', name:'Natura',   count:2 },
-  { id:'c3', name:'Itaú',     count:1 },
+const CLIENTES_INITIAL = [
+  { id:'c1', name:'Marlboro', color:'#dc2626' },
+  { id:'c2', name:'Natura',   color:'#16a34a' },
+  { id:'c3', name:'Itaú',     color:'#f59e0b' },
 ];
+
+const CLIENT_COLORS = ['#8b5cf6','#c026d3','#ec4899','#ef4444','#f59e0b','#22c55e','#06b6d4','#3b82f6','#a855f7','#64748b'];
 
 const PROJETOS = [
   { id:'p1', cliente:'Marlboro', nome:'Verão 2026 — Lançamento', tempo:'3h atrás', total:12, status:{em_producao:4,editado:2,aprovado:5,revisado_ok:1,revisora_ajuste:0}, grad:'from-violet-500 via-fuchsia-500 to-pink-500' },
@@ -663,12 +702,146 @@ FORMATS.forEach((f,i)=>{
   state.approvalStatus[f.id] = i<5 ? 'aprovado' : 'em_producao';
 });
 
-// projetos mutáveis (para suportar exclusão)
+// projetos e clientes mutáveis (suportar criação/exclusão + persistência)
 state.projetos = PROJETOS.map(p => ({ ...p }));
+state.clientes = CLIENTES_INITIAL.map(c => ({ ...c }));
+state.newClientColor = CLIENT_COLORS[0];
+state.uploadedFile = null; // arquivo selecionado pelo input file
+
+// ===== PERSISTÊNCIA (localStorage) =====
+const STORAGE_KEY = 'kv-studio-state-v1';
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      projetos: state.projetos,
+      clientes: state.clientes,
+      revisaoStatus: state.revisaoStatus,
+      approvalStatus: state.approvalStatus,
+      annotations: state.annotations,
+      customFormats: state.customFormats,
+    }));
+  } catch(e) { console.warn('persist falhou', e); }
+}
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.projetos)        state.projetos        = data.projetos;
+    if (data.clientes)        state.clientes        = data.clientes;
+    if (data.revisaoStatus)   state.revisaoStatus   = data.revisaoStatus;
+    if (data.approvalStatus)  state.approvalStatus  = data.approvalStatus;
+    if (data.annotations)     state.annotations     = data.annotations;
+    if (data.customFormats)   state.customFormats   = data.customFormats;
+  } catch(e) { console.warn('load falhou', e); }
+}
+loadPersisted();
+
+// ===== NOVO CLIENTE =====
+function openNewClient() {
+  document.getElementById('nc-name').value = '';
+  state.newClientColor = CLIENT_COLORS[0];
+  renderColorPicker();
+  const m = document.getElementById('new-client-modal');
+  m.classList.remove('hidden'); m.classList.add('flex');
+  setTimeout(()=>document.getElementById('nc-name').focus(), 50);
+}
+function closeNewClient() {
+  const m = document.getElementById('new-client-modal');
+  m.classList.add('hidden'); m.classList.remove('flex');
+}
+function renderColorPicker() {
+  document.getElementById('nc-color-picker').innerHTML = CLIENT_COLORS.map(c => `
+    <button onclick="state.newClientColor='${c}'; renderColorPicker()" class="w-8 h-8 rounded-full ${state.newClientColor===c?'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900 ring-brand-500':''}" style="background:${c}"></button>
+  `).join('');
+}
+function saveNewClient() {
+  const name = document.getElementById('nc-name').value.trim();
+  if (!name) { toast('Digite um nome'); return; }
+  const id = 'c'+Date.now();
+  state.clientes.push({ id, name, color: state.newClientColor });
+  persist();
+  closeNewClient();
+  renderRepositorio();
+  toast(`Cliente "${name}" adicionado`);
+}
 
 // PSD review state
 state.psdLayers = [];
 state.psdPhase = 'idle'; // 'uploading' | 'parsing' | 'review'
+
+// Disparar o file picker REAL do sistema
+function triggerPSDUpload() {
+  // Garante que cliente + campanha estão preenchidos
+  const camp = document.getElementById('np-campanha').value.trim();
+  if (!camp) { toast('Preencha o nome da campanha primeiro'); document.getElementById('np-campanha').focus(); return; }
+  document.getElementById('psd-file-input').click();
+}
+
+// Lê arquivo real selecionado
+document.getElementById('psd-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  state.uploadedFile = {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    sizeMB: (file.size / 1024 / 1024).toFixed(2),
+  };
+  // Preview de imagem se for png/jpg
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      state.uploadedFile.dataUrl = ev.target.result;
+      openPSDReview();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    openPSDReview();
+  }
+  e.target.value = ''; // permite re-upload do mesmo arquivo
+});
+
+function createProjectFromScratch() {
+  const campanha = document.getElementById('np-campanha').value.trim();
+  if (!campanha) { toast('Preencha o nome da campanha'); return; }
+  const clienteId = document.getElementById('np-cliente').value;
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  if (!cliente) { toast('Selecione um cliente'); return; }
+  createProject({ cliente, campanha, source: 'do_zero' });
+  closeNewProject();
+  show('brand');
+}
+
+function createProject({ cliente, campanha, source, layers }) {
+  const grads = [
+    'from-violet-500 via-fuchsia-500 to-pink-500',
+    'from-indigo-500 via-purple-500 to-fuchsia-500',
+    'from-purple-600 via-violet-600 to-indigo-600',
+    'from-fuchsia-500 via-pink-500 to-rose-500',
+    'from-blue-500 via-indigo-500 to-purple-500',
+  ];
+  const proj = {
+    id: 'p'+Date.now(),
+    clienteId: cliente.id,
+    cliente: cliente.name,
+    nome: campanha,
+    tempo: 'agora',
+    total: 0,
+    grad: grads[state.projetos.length % grads.length],
+    status: { em_producao:0, editado:0, aprovado:0, revisado_ok:0, revisora_ajuste:0 },
+    source,
+    layers: layers || [],
+    file: state.uploadedFile,
+    createdAt: Date.now(),
+  };
+  state.projetos.unshift(proj);
+  persist();
+  renderRepositorio();
+  toast(`Projeto "${campanha}" criado`);
+  state.uploadedFile = null;
+  return proj;
+}
 
 function openPSDReview() {
   closeNewProject();
@@ -678,8 +851,8 @@ function openPSDReview() {
   m.classList.remove('hidden'); m.classList.add('flex');
   renderPSDModal();
   // Simula upload → parsing → review
-  setTimeout(() => { state.psdPhase = 'parsing'; renderPSDModal(); }, 800);
-  setTimeout(() => { state.psdPhase = 'review';  renderPSDModal(); }, 2400);
+  setTimeout(() => { state.psdPhase = 'parsing'; renderPSDModal(); }, 1000);
+  setTimeout(() => { state.psdPhase = 'review';  renderPSDModal(); }, 2600);
 }
 
 function closePSDReview() {
@@ -696,19 +869,33 @@ function renderPSDModal() {
 
   if (state.psdPhase === 'uploading' || state.psdPhase === 'parsing') {
     const isUploading = state.psdPhase === 'uploading';
+    const f = state.uploadedFile;
+    const fileBlock = f ? `
+      <div class="w-full max-w-sm rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 flex items-center gap-3">
+        ${f.dataUrl
+          ? `<img src="${f.dataUrl}" class="w-16 h-16 rounded-lg object-cover" alt="preview" />`
+          : `<div class="w-16 h-16 rounded-lg gradient-bg flex items-center justify-center text-2xl text-white shrink-0">📄</div>`}
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold truncate">${f.name}</p>
+          <p class="text-xs text-zinc-500">${f.sizeMB} MB · ${f.type||'PSD'}</p>
+        </div>
+        <span class="text-xs gradient-text font-bold">${isUploading?'enviando…':'analisando…'}</span>
+      </div>
+    ` : '';
     body.innerHTML = `
-      <div class="py-16 flex flex-col items-center justify-center gap-6">
+      <div class="py-10 flex flex-col items-center justify-center gap-5">
         <div class="w-20 h-20 rounded-full gradient-bg flex items-center justify-center text-4xl shadow-glow-lg" style="animation: pulse 1.5s ease-in-out infinite">
           ${isUploading ? '📤' : '🔍'}
         </div>
-        <div class="text-center space-y-2 max-w-md">
-          <h3 class="font-bold text-xl">${isUploading ? 'Enviando seu PSD…' : 'Analisando camadas…'}</h3>
+        <div class="text-center space-y-1.5 max-w-md">
+          <h3 class="font-bold text-xl">${isUploading ? 'Enviando seu arquivo…' : 'Analisando camadas…'}</h3>
           <p class="text-sm text-zinc-500">${isUploading
             ? 'Recebendo o arquivo e preparando para análise.'
             : 'A IA está identificando elementos, classificando hierarquia visual e mapeando cada camada.'}</p>
         </div>
+        ${fileBlock}
         <div class="w-64 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-          <div class="h-full gradient-bg" style="animation: psd-progress ${isUploading?'0.8':'1.6'}s ease-in-out forwards; width:0%"></div>
+          <div class="h-full gradient-bg" style="animation: psd-progress ${isUploading?'1':'1.6'}s ease-in-out forwards; width:0%"></div>
         </div>
       </div>
       <style>@keyframes psd-progress { from{width:0%} to{width:100%} } @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:.85} }</style>
@@ -729,13 +916,28 @@ function renderPSDModal() {
     .concat(Object.keys(byCat).filter(k => !LAYER_CATEGORIES.find(c => c.key===k)));
   const summary = ordered.map(k => `<span class="inline-block px-2 py-0.5 rounded-full bg-white/70 dark:bg-zinc-900/70 text-xs font-semibold mr-1.5 mb-1">${(LAYER_CATEGORIES.find(c=>c.key===k)||{}).icon||''} ${k} (${byCat[k]})</span>`).join('');
 
+  const f = state.uploadedFile;
+  const fileHeader = f ? `
+    <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 flex items-center gap-3 bg-white dark:bg-zinc-900">
+      ${f.dataUrl
+        ? `<img src="${f.dataUrl}" class="w-12 h-12 rounded-lg object-cover" alt="preview" />`
+        : `<div class="w-12 h-12 rounded-lg gradient-bg flex items-center justify-center text-lg text-white shrink-0">📄</div>`}
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate">${f.name}</p>
+        <p class="text-xs text-zinc-500">${f.sizeMB} MB</p>
+      </div>
+      <span class="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-semibold">✓ analisado</span>
+    </div>
+  ` : '';
+
   body.innerHTML = `
     <div class="space-y-5">
+      ${fileHeader}
       <div class="rounded-2xl border border-brand-200 dark:border-brand-800 p-5" style="background: var(--gradient-soft)">
         <div class="flex items-start gap-3">
           <span class="text-2xl shrink-0">🤖</span>
           <div class="flex-1">
-            <h4 class="font-bold text-base mb-1.5">Identifiquei ${state.psdLayers.length} camadas no seu PSD</h4>
+            <h4 class="font-bold text-base mb-1.5">Identifiquei ${state.psdLayers.length} camadas no seu ${f ? (f.type.startsWith('image/') ? 'arquivo' : 'PSD') : 'PSD'}</h4>
             <div class="-mb-1.5">${summary}</div>
             <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-3 leading-relaxed">
               <strong>Confirme a classificação abaixo.</strong> Se a IA errou, ajuste agora —
@@ -799,9 +1001,18 @@ function addEmptyLayer() {
 }
 function confirmPSDLayers() {
   if (state.psdLayers.length === 0) return;
+  // Pega cliente/campanha do form (que ficou aberto antes)
+  const clienteId = document.getElementById('np-cliente')?.value;
+  const campanha = document.getElementById('np-campanha')?.value?.trim() || (state.uploadedFile?.name?.replace(/\.[^.]+$/,'') ?? 'Sem nome');
+  const cliente = state.clientes.find(c => c.id === clienteId) || state.clientes[0];
+  createProject({
+    cliente,
+    campanha,
+    source: 'psd',
+    layers: state.psdLayers.map(l => ({ ...l })),
+  });
   closePSDReview();
   show('brand');
-  toast(`PSD importado com ${state.psdLayers.length} camadas ✨`);
 }
 
 function deleteProject(id) {
@@ -809,6 +1020,7 @@ function deleteProject(id) {
   if (!p) return;
   if (!confirm(`Excluir o projeto "${p.nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
   state.projetos = state.projetos.filter(x => x.id !== id);
+  persist();
   renderRepositorio();
   toast(`Projeto "${p.nome}" excluído`);
 }
@@ -897,20 +1109,30 @@ function toast(msg) {
 
 // REPOSITÓRIO
 function renderRepositorio() {
-  document.getElementById('clientes-list').innerHTML = CLIENTES.map(c=>`
-    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition group">
-      <span class="flex items-center gap-2.5"><span class="w-1.5 h-1.5 rounded-full gradient-bg"></span>${c.name}</span>
-      <span class="text-xs text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300">${c.count}</span>
-    </button>
-  `).join('');
+  // Atualiza tb. as opções do select de cliente no modal de novo projeto
+  const npSel = document.getElementById('np-cliente');
+  if (npSel) npSel.innerHTML = state.clientes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
-  const cards = state.projetos.map(p=>`
+  document.getElementById('clientes-list').innerHTML = state.clientes.map(c=>{
+    const count = state.projetos.filter(p => p.clienteId === c.id || p.cliente === c.name).length;
+    return `
+      <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition group">
+        <span class="flex items-center gap-2.5"><span class="w-2 h-2 rounded-full" style="background:${c.color||'#8b5cf6'}"></span>${c.name}</span>
+        <span class="text-xs text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300">${count}</span>
+      </button>
+    `;
+  }).join('');
+
+  const cards = state.projetos.map(p=>{
+    const thumb = p.file?.dataUrl;
+    return `
     <div class="group relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-glow hover:border-brand-400/50 transition-all overflow-hidden">
-      <button onclick="show('brand'); toast('Abrindo: ${p.nome}')" class="block w-full text-left">
-        <div class="aspect-[4/3] bg-gradient-to-br ${p.grad} relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+      <button onclick="show('brand'); toast('Abrindo: ${p.nome.replace(/'/g,'&apos;')}')" class="block w-full text-left">
+        <div class="aspect-[4/3] ${thumb?'bg-zinc-100 dark:bg-zinc-950':'bg-gradient-to-br '+p.grad} relative overflow-hidden">
+          ${thumb ? `<img src="${thumb}" class="absolute inset-0 w-full h-full object-cover" alt="${p.nome}" />` : ''}
+          <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
           <span class="absolute top-3 left-3 px-2.5 py-1 text-[11px] font-semibold bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded-full">${p.cliente}</span>
-          <div class="absolute bottom-3 left-3 text-white/90 text-xs font-medium">${p.total} formatos</div>
+          <div class="absolute bottom-3 left-3 text-white/90 text-xs font-medium">${p.total||0} formatos${p.layers?.length?` · ${p.layers.length} camadas`:''}</div>
         </div>
         <div class="p-4 space-y-2">
           <div class="font-semibold text-sm truncate">${p.nome}</div>
@@ -936,7 +1158,8 @@ function renderRepositorio() {
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   document.getElementById('projetos-grid').innerHTML = `
     <button onclick="openNewProject()" class="aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/30 transition flex flex-col items-center justify-center gap-2 group">
