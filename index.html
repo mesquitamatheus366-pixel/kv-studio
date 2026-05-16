@@ -1500,16 +1500,19 @@ function renderEditor() {
     const hasLayerImages = (p.layers||[]).some(l => l.dataUrl);
 
     if (hasLayerImages) {
-      // Pilha de camadas REAIS — cada uma com posição e imagem própria
+      // Composite no fundo (100% opacidade) + camadas como crops por cima
+      // Quando o usuário arrasta um crop, ele sai da posição original revelando
+      // o composite atrás. Visualmente intuitivo.
       const layersExtracted = (p.layers||[]).filter(l=>l.dataUrl).length;
       const totalLayers = (p.layers||[]).length;
       wrap.innerHTML = `
-        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden" style="transform: scale(${z}); transform-origin: center; background: #0a0a0a">
+        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-zinc-900" style="transform: scale(${z}); transform-origin: center;">
           <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden;">
+            <img src="${p.file.dataUrl}" class="absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'} pointer-events-none" alt="composta" />
             <div id="layer-stack" class="absolute inset-0"></div>
             <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
           </div>
-          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${layersExtracted}/${totalLayers} camadas com imagem</div>
+          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${layersExtracted}/${totalLayers} camadas</div>
         </div>
       `;
       renderLayerImages();
@@ -1574,17 +1577,25 @@ function getLayerPos(layer) {
 state.selectedLayerId = null;
 
 // Renderiza cada camada do PSD como uma imagem posicionada (pilha real)
+// Camadas SÓ aparecem (cobrindo o composite) quando estão "deslocadas" ou selecionadas.
+// Quando estão na posição original (basePos), ficam invisíveis para não duplicar o composite.
 function renderLayerImages() {
   const stack = document.getElementById('layer-stack');
   if (!stack) return;
   const p = state.currentProject;
   const all = (p.layers || []).filter(l => l.visible !== false && l.dataUrl);
-  // p.layers[0] é o topo da pilha → renderizar por último (z-index maior)
   const reversed = all.slice().reverse();
   stack.innerHTML = reversed.map(l => {
     const pos = getLayerPos(l);
-    const op = l.opacity ?? 1;
-    return `<img src="${l.dataUrl}" data-layer-img="${l.id}" class="absolute pointer-events-none select-none" draggable="false" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%;opacity:${op};object-fit:fill" alt="${l.name}" />`;
+    const base = l.basePos || DEFAULT_POS[l.category] || DEFAULT_POS.Outro;
+    // Está na posição "original"? (diferença muito pequena)
+    const moved = !base || Math.abs(pos.x-base.x)>0.5 || Math.abs(pos.y-base.y)>0.5 || Math.abs(pos.w-base.w)>0.5 || Math.abs(pos.h-base.h)>0.5;
+    const isSelected = state.selectedLayerId === l.id;
+    // Mostra a imagem se a camada está deslocada OU selecionada (preview)
+    const show = moved || isSelected;
+    const op = (l.opacity ?? 1) * (show ? 1 : 0);
+    const ringClass = isSelected ? 'ring-2 ring-brand-500' : '';
+    return `<img src="${l.dataUrl}" data-layer-img="${l.id}" class="absolute pointer-events-none select-none transition-opacity ${ringClass}" draggable="false" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%;opacity:${op};object-fit:fill" alt="${l.name}" />`;
   }).join('');
 }
 
