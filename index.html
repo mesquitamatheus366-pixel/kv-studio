@@ -329,7 +329,7 @@ tailwind.config = {
     </div>
     <div class="flex items-center gap-2">
       <button onclick="show('brand')" class="px-3 py-1.5 rounded-lg text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">🎨 Brand kit</button>
-      <button onclick="advanceToFormatos()" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold">Avançar para formatos →</button>
+      <button onclick="saveEditorChanges()" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold">✓ Salvar e voltar à revisão</button>
     </div>
   </header>
 
@@ -394,13 +394,15 @@ tailwind.config = {
   <div id="stepper-formatos" class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-3"></div>
 
   <main class="flex-1 p-10 space-y-8 overflow-auto">
-    <header class="flex items-end justify-between">
+    <header class="flex items-end justify-between flex-wrap gap-4">
       <div>
         <h1 class="text-4xl font-bold tracking-tight">Seleção de <span class="gradient-text">formatos</span></h1>
-        <p class="text-sm text-zinc-500 mt-2">Escolha até <strong>5 formatos âncora</strong>. O resto será derivado automaticamente.</p>
+        <p class="text-sm text-zinc-500 mt-2">Escolha quantos quiser. <strong>Sugestão</strong>: 3 a 5 âncoras para wireframe — você pode selecionar todos se preferir desdobrar tudo.</p>
       </div>
-      <div class="flex items-center gap-3">
-        <span id="format-counter" class="text-sm font-semibold">0 de 5 selecionados</span>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="format-counter" class="text-sm font-semibold">0 formatos selecionados</span>
+        <button onclick="selectAllFormats()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">Selecionar todos</button>
+        <button onclick="clearAllFormats()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">Limpar</button>
         <button id="btn-wireframe" onclick="show('wireframe')" class="px-5 py-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-400 text-sm font-semibold cursor-not-allowed" disabled>Gerar wireframes →</button>
       </div>
     </header>
@@ -682,20 +684,22 @@ const BRAND_SECTIONS = [
   { key:'regras',     label:'Regras de uso', icon:'📐', done:false },
 ];
 
-const PALETTE = [
+const PALETTE_INITIAL = [
   { hex:'#8b5cf6', label:'Violeta',  role:'Headline' },
   { hex:'#c026d3', label:'Fúcsia',   role:'CTA'      },
   { hex:'#1e1b4b', label:'Índigo',   role:'Fundo'    },
   { hex:'#f5f3ff', label:'Lavanda',  role:'Base'     },
 ];
 
-const RULES = [
+const RULES_INITIAL = [
   'Arco sempre no topo da composição (10% do canvas)',
   'Logo sempre no canto direito superior, mínimo 60px de largura',
   'Aviso sanitário sempre ocupa ≥20% da área inferior em formatos verticais',
   'Headline em caixa alta para esta marca',
   'Nunca usar fundo branco puro — usar base definida',
 ];
+
+const COLOR_ROLES = ['Headline','CTA','Fundo','Base','Arco','Subheadline','Outro'];
 
 const FORMATS = [
   { id:'f1', label:'Vertical alto',     w:300,  h:600,  suggested:true,  reading:'topo → hero → headline → cta → logo' },
@@ -751,7 +755,7 @@ const AI_RESPONSES = {
   'Aviso':    'Aviso sanitário em 22% da área inferior (acima do mínimo regulatório).',
 };
 
-const BACK_MAP = { repositorio:'landing', editor:'repositorio', brand:'editor', formatos:'editor', wireframe:'formatos', revisao:'wireframe', aprovacao:'revisao' };
+const BACK_MAP = { repositorio:'landing', brand:'repositorio', formatos:'brand', wireframe:'formatos', revisao:'wireframe', editor:'revisao', aprovacao:'revisao' };
 
 const state = {
   activeScreen: 'landing',
@@ -776,8 +780,10 @@ FORMATS.forEach((f,i)=>{
 // projetos e clientes mutáveis (suportar criação/exclusão + persistência)
 state.projetos = PROJETOS.map(p => ({ ...p }));
 state.clientes = CLIENTES_INITIAL.map(c => ({ ...c }));
+state.paleta = PALETTE_INITIAL.map(c => ({ ...c }));
+state.regras = [...RULES_INITIAL];
 state.newClientColor = CLIENT_COLORS[0];
-state.uploadedFile = null; // arquivo selecionado pelo input file
+state.uploadedFile = null;
 
 // ===== PERSISTÊNCIA (localStorage) =====
 const STORAGE_KEY = 'kv-studio-state-v1';
@@ -805,6 +811,8 @@ function loadPersisted() {
     if (data.annotations)     state.annotations     = data.annotations;
     if (data.customFormats)   state.customFormats   = data.customFormats;
     if (data.notifications)   state.notifications   = data.notifications;
+    if (data.paleta)          state.paleta          = data.paleta;
+    if (data.regras)          state.regras          = data.regras;
   } catch(e) { console.warn('load falhou', e); }
 }
 loadPersisted();
@@ -827,6 +835,7 @@ function persistAll() {
     revisaoStatus: state.revisaoStatus, approvalStatus: state.approvalStatus,
     annotations: state.annotations, customFormats: state.customFormats,
     notifications: state.notifications,
+    paleta: state.paleta, regras: state.regras,
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1294,7 +1303,8 @@ function confirmPSDLayers() {
   addNotification('psd_parsed', 'PSD analisado',
     `${state.psdLayers.length} camadas identificadas em "${campanha}"`);
   closePSDReview();
-  openProject(proj.id);
+  state.currentProject = proj;
+  show('brand');
 }
 
 // ===== EDITOR =====
@@ -1304,8 +1314,15 @@ function openProject(id) {
   const p = state.projetos.find(x => x.id === id);
   if (!p) return;
   state.currentProject = p;
-  // garante visible=true em todas as camadas
   if (Array.isArray(p.layers)) p.layers.forEach(l => { if (l.visible === undefined) l.visible = true; });
+  state.editorZoom = 1;
+  state.editingFormatId = null;
+  show('brand'); // novo fluxo: abre Brand Studio (configura) → Formatos → ...
+}
+
+// Abre o editor para EDITAR UM FORMATO específico (manualmente, vindo da revisão)
+function editFormat(formatId) {
+  state.editingFormatId = formatId;
   state.editorZoom = 1;
   show('editor');
 }
@@ -1326,20 +1343,42 @@ function renderEditor() {
     document.getElementById('editor-breadcrumb').textContent = '';
     return;
   }
-  document.getElementById('editor-breadcrumb').textContent = `${p.cliente} · ${p.nome} · Editor`;
+  // Contexto do formato em edição
+  const fmt = state.editingFormatId
+    ? (FORMATS.find(f => f.id === state.editingFormatId) || state.customFormats.find(f => f.id === state.editingFormatId))
+    : null;
+
+  document.getElementById('editor-breadcrumb').innerHTML = fmt
+    ? `${p.cliente} · ${p.nome} · <span class="gradient-text font-semibold">Editando ${fmt.w}×${fmt.h} (${fmt.label})</span>`
+    : `${p.cliente} · ${p.nome} · KV master (preview)`;
 
   const wrap = document.getElementById('editor-canvas-wrap');
   const z = state.editorZoom;
   document.getElementById('editor-zoom-val').textContent = `${Math.round(z*100)}%`;
 
   if (p.file?.dataUrl) {
-    // imagem real (PSD composto ou PNG/JPG)
+    // Define dimensões do canvas: se editando formato, usa aspect dele; senão usa imagem natural
+    let canvasW, canvasH, aspectInfo;
+    if (fmt) {
+      const aspect = fmt.w / fmt.h;
+      const maxW = 720, maxH = 600;
+      if (aspect > maxW/maxH) { canvasW = maxW; canvasH = maxW / aspect; }
+      else { canvasH = maxH; canvasW = maxH * aspect; }
+      aspectInfo = `Formato: ${fmt.w}×${fmt.h} (proporção ${aspect.toFixed(2)})`;
+    } else {
+      canvasW = 720; canvasH = 'auto';
+      aspectInfo = p.file.name?.toLowerCase().endsWith('.psd')
+        ? `PSD · ${p.file.width||'?'}×${p.file.height||'?'}`
+        : 'KV master';
+    }
     const isPSD = p.file.name?.toLowerCase().endsWith('.psd');
     wrap.innerHTML = `
       <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
-        <img src="${p.file.dataUrl}" id="editor-img" class="block max-w-[800px] max-h-[600px] w-auto h-auto" alt="${p.nome}" />
-        <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
-        ${isPSD ? `<div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">PSD · ${p.file.width||'?'}×${p.file.height||'?'}</div>` : ''}
+        <div class="relative" style="width:${canvasW}px;${canvasH==='auto'?'':`height:${canvasH}px`}; ${fmt?'overflow:hidden;':''}">
+          <img src="${p.file.dataUrl}" id="editor-img" class="block ${fmt?'absolute inset-0 w-full h-full object-cover':'max-w-[720px] max-h-[600px] w-auto h-auto'}" alt="${p.nome}" />
+          <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+        <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo}</div>
       </div>
     `;
     renderLayerOverlays();
@@ -1472,6 +1511,84 @@ function resetEditorZoom() { state.editorZoom = 1; renderEditor(); }
 function advanceToFormatos() {
   if (!state.currentProject) { show('formatos'); return; }
   show('formatos');
+}
+
+// ===== BRAND STUDIO: paleta e regras editáveis =====
+function addColor() {
+  const colors = ['#8b5cf6','#c026d3','#ec4899','#ef4444','#f59e0b','#22c55e','#06b6d4','#3b82f6'];
+  state.paleta.push({ hex: colors[state.paleta.length % colors.length], label: 'Nova cor', role: 'Outro' });
+  persistAll(); renderBrand();
+}
+function removeColor(i) {
+  if (state.paleta.length <= 1) { toast('Mantenha ao menos uma cor'); return; }
+  state.paleta.splice(i, 1);
+  persistAll(); renderBrand();
+}
+function updateColorHex(i, hex) {
+  if (state.paleta[i]) { state.paleta[i].hex = hex; persistAll(); renderBrand(); }
+}
+function updateColorLabel(i, label) {
+  if (state.paleta[i]) { state.paleta[i].label = label; persistAll(); }
+}
+function updateColorRole(i, role) {
+  if (state.paleta[i]) { state.paleta[i].role = role; persistAll(); }
+}
+function addRule() {
+  const r = prompt('Nova regra de marca:', '');
+  if (!r || !r.trim()) return;
+  state.regras.push(r.trim());
+  persistAll(); renderBrand();
+}
+function updateRule(i, r) {
+  state.regras[i] = r;
+  persistAll();
+}
+function removeRule(i) {
+  state.regras.splice(i, 1);
+  persistAll(); renderBrand();
+}
+
+function saveEditorChanges() {
+  if (state.editingFormatId) {
+    // Marca o formato como editado
+    state.revisaoStatus[state.editingFormatId] = 'editado';
+    persistAll();
+    const f = FORMATS.find(x=>x.id===state.editingFormatId) || state.customFormats.find(x=>x.id===state.editingFormatId);
+    addNotification('comment', 'Formato editado manualmente', `${f.label} (${f.w}×${f.h}) foi ajustado pelo designer.`);
+    toast(`Ajustes salvos em ${f.w}×${f.h}`);
+    state.editingFormatId = null;
+    show('revisao');
+  } else {
+    toast('Alterações salvas');
+    show('revisao');
+  }
+}
+
+function renameProject(id) {
+  const p = state.projetos.find(x => x.id === id);
+  if (!p) return;
+  const novo = prompt('Novo nome para o projeto:', p.nome);
+  if (!novo || !novo.trim() || novo === p.nome) return;
+  p.nome = novo.trim();
+  persistAll();
+  renderRepositorio();
+  addNotification('comment', 'Projeto renomeado', `"${p.nome}" foi renomeado.`);
+  toast('Projeto renomeado');
+}
+
+function duplicateProject(id) {
+  const p = state.projetos.find(x => x.id === id);
+  if (!p) return;
+  const copy = JSON.parse(JSON.stringify(p));
+  copy.id = 'p' + Date.now();
+  copy.nome = p.nome + ' (cópia)';
+  copy.tempo = 'agora';
+  copy.createdAt = Date.now();
+  state.projetos.unshift(copy);
+  persistAll();
+  renderRepositorio();
+  addNotification('project_created', 'Projeto duplicado', `"${copy.nome}" foi criado a partir de uma cópia.`);
+  toast('Projeto duplicado');
 }
 
 function deleteProject(id) {
@@ -1612,8 +1729,8 @@ function renderRepositorio() {
           <button onclick="toggleProjectMenu('${p.id}', event)" class="w-8 h-8 rounded-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 shadow-md" title="Mais opções">⋯</button>
           <div id="menu-${p.id}" class="hidden absolute top-10 right-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 min-w-[160px] z-10">
             <button onclick="openProject('${p.id}')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📂 Abrir</button>
-            <button onclick="toast('Renomear (mock)')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">✏️ Renomear</button>
-            <button onclick="toast('Duplicar (mock)')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📋 Duplicar</button>
+            <button onclick="renameProject('${p.id}')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">✏️ Renomear</button>
+            <button onclick="duplicateProject('${p.id}')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📋 Duplicar</button>
             <div class="h-px bg-zinc-200 dark:bg-zinc-800 my-1"></div>
             <button onclick="deleteProject('${p.id}')" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition flex items-center gap-2">🗑️ Excluir projeto</button>
           </div>
@@ -1656,15 +1773,26 @@ function renderBrand() {
   let content = '';
   if (state.brandSection==='paleta') {
     content = `
-      <h3 class="text-xl font-bold">Paleta — cores com papéis</h3>
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-bold">Paleta — cores com papéis</h3>
+        <button onclick="addColor()" class="btn-primary px-3 py-1.5 rounded-lg text-xs font-semibold">+ Adicionar cor</button>
+      </div>
       <div class="grid grid-cols-4 gap-4">
-        ${PALETTE.map(c=>`
-          <div onclick="toast('Cor ${c.label} selecionada')" class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden hover:shadow-glow hover:border-brand-400/50 transition cursor-pointer">
-            <div class="h-24" style="background:${c.hex}"></div>
-            <div class="p-3.5 space-y-1.5">
-              <div class="text-sm font-semibold">${c.label}</div>
+        ${state.paleta.map((c, i)=>`
+          <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden hover:shadow-glow hover:border-brand-400/50 transition group">
+            <label class="block h-24 cursor-pointer relative" style="background:${c.hex}">
+              <input type="color" value="${c.hex}" onchange="updateColorHex(${i}, this.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+              <span class="absolute bottom-2 left-2 text-[10px] font-semibold bg-black/40 backdrop-blur px-1.5 py-0.5 rounded text-white opacity-0 group-hover:opacity-100 transition pointer-events-none">clique para editar</span>
+            </label>
+            <div class="p-3 space-y-1.5">
+              <input value="${c.label.replace(/"/g,'&quot;')}" oninput="updateColorLabel(${i}, this.value)" class="w-full text-sm font-semibold bg-transparent border-none focus:outline-none focus:bg-zinc-50 dark:focus:bg-zinc-950 rounded px-1.5 py-0.5" />
               <div class="text-xs text-zinc-500 font-mono">${c.hex.toUpperCase()}</div>
-              <div class="text-[11px] inline-block px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 font-medium">papel: ${c.role}</div>
+              <div class="flex items-center gap-1">
+                <select onchange="updateColorRole(${i}, this.value)" class="text-[11px] flex-1 min-w-0 border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 rounded px-1.5 py-1 focus:outline-none">
+                  ${COLOR_ROLES.map(r=>`<option value="${r}" ${r===c.role?'selected':''}>${r}</option>`).join('')}
+                </select>
+                <button onclick="removeColor(${i})" class="w-7 h-7 rounded-md text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition text-sm shrink-0">×</button>
+              </div>
             </div>
           </div>
         `).join('')}
@@ -1686,11 +1814,20 @@ function renderBrand() {
     `;
   } else if (state.brandSection==='regras') {
     content = `
-      <h3 class="text-xl font-bold">Regras de uso</h3>
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-bold">Regras de uso</h3>
+        <button onclick="addRule()" class="btn-primary px-3 py-1.5 rounded-lg text-xs font-semibold">+ Adicionar regra</button>
+      </div>
       <ul class="space-y-2">
-        ${RULES.map(r=>`<li class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 text-sm flex items-start gap-3 hover:border-brand-400/50 transition"><span class="w-5 h-5 rounded-full gradient-bg text-white flex items-center justify-center text-[10px] shrink-0">✓</span><span>${r}</span></li>`).join('')}
+        ${state.regras.map((r, i)=>`
+          <li class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 text-sm flex items-start gap-3 hover:border-brand-400/50 transition group">
+            <span class="w-5 h-5 rounded-full gradient-bg text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">${i+1}</span>
+            <input value="${r.replace(/"/g,'&quot;')}" oninput="updateRule(${i}, this.value)" class="flex-1 bg-transparent border-none focus:outline-none focus:bg-zinc-50 dark:focus:bg-zinc-950 rounded px-2 py-1" />
+            <button onclick="removeRule(${i})" class="w-7 h-7 rounded-md text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition text-sm shrink-0 opacity-0 group-hover:opacity-100">×</button>
+          </li>
+        `).join('')}
+        ${state.regras.length===0?'<p class="text-sm text-zinc-500 text-center py-6">Nenhuma regra cadastrada. Adicione uma para a IA seguir.</p>':''}
       </ul>
-      <button onclick="toast('Nova regra adicionada')" class="text-sm gradient-text font-semibold hover:underline">+ adicionar regra</button>
     `;
   } else if (state.brandSection==='logo') {
     content = `
@@ -1770,10 +1907,9 @@ function renderFormatos() {
 
   const renderCard = (f, starred) => {
     const isSelected = state.selectedFormats.includes(f.id);
-    const isDisabled = !isSelected && state.selectedFormats.length >= 5;
     const aspect = f.w / f.h;
     return `
-      <button onclick="toggleFormat('${f.id}')" ${isDisabled?'disabled':''} class="rounded-2xl border-2 p-3.5 text-left relative transition-all ${isSelected?'border-transparent bg-brand-50 dark:bg-brand-950/50 shadow-glow gradient-border':'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md'} ${isDisabled?'opacity-40 cursor-not-allowed':''}">
+      <button onclick="toggleFormat('${f.id}')" class="rounded-2xl border-2 p-3.5 text-left relative transition-all ${isSelected?'border-transparent bg-brand-50 dark:bg-brand-950/50 shadow-glow gradient-border':'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md'}">
         ${starred?'<span class="absolute top-2.5 right-2.5 gradient-text text-xs font-bold">★</span>':''}
         ${isSelected?'<span class="absolute top-2 right-2 w-5 h-5 rounded-full gradient-bg text-white text-xs flex items-center justify-center shadow-glow">✓</span>':''}
         <div class="bg-zinc-100 dark:bg-zinc-800 rounded-lg mb-2.5 flex items-center justify-center" style="aspect-ratio:${aspect};max-height:80px"><span class="text-[10px] font-mono text-zinc-500">${f.w}×${f.h}</span></div>
@@ -1787,8 +1923,8 @@ function renderFormatos() {
 
   const count = state.selectedFormats.length;
   const counter = document.getElementById('format-counter');
-  counter.textContent = `${count} de 5 selecionados`;
-  counter.className = `text-sm font-semibold ${count===5?'gradient-text':count>0?'text-zinc-700 dark:text-zinc-300':'text-zinc-400'}`;
+  counter.textContent = `${count} ${count===1?'formato':'formatos'} selecionado${count===1?'':'s'}`;
+  counter.className = `text-sm font-semibold ${count>0?'gradient-text':'text-zinc-400'}`;
 
   const btn = document.getElementById('btn-wireframe');
   if (count >= 1) {
@@ -1803,8 +1939,22 @@ function renderFormatos() {
 function toggleFormat(id) {
   const idx = state.selectedFormats.indexOf(id);
   if (idx >= 0) state.selectedFormats.splice(idx, 1);
-  else if (state.selectedFormats.length < 5) state.selectedFormats.push(id);
-  else { toast('Máximo de 5 formatos âncora'); return; }
+  else state.selectedFormats.push(id);
+  persistAll();
+  renderFormatos();
+}
+
+function selectAllFormats() {
+  const all = [...FORMATS.map(f=>f.id), ...state.customFormats.map(f=>f.id)];
+  state.selectedFormats = all;
+  persistAll();
+  renderFormatos();
+  toast(`Selecionados: ${all.length} formatos`);
+}
+
+function clearAllFormats() {
+  state.selectedFormats = [];
+  persistAll();
   renderFormatos();
 }
 
@@ -1920,7 +2070,7 @@ function renderRevisao() {
         </div>
         <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1.5">
           <button onclick="event.stopPropagation(); toast('Comentar IA — ${f.label}')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80">💬</button>
-          <button onclick="event.stopPropagation(); show('editor')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80" title="Editar manualmente">✏️</button>
+          <button onclick="event.stopPropagation(); editFormat('${f.id}')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80" title="Editar manualmente">✏️</button>
           <button onclick="event.stopPropagation(); exportFormat('${f.id}')" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur text-white text-xs hover:bg-black/80" title="Exportar PNG">↓</button>
         </div>
       </div>
@@ -1949,7 +2099,7 @@ function renderRevisao() {
         <button onclick="toast('IA processando...')" class="mt-2 w-full btn-primary px-3 py-2 rounded-xl text-xs font-semibold">🤖 Pedir ajuste à IA</button>
       </section>
       <section class="space-y-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-        <button onclick="show('editor')" class="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">✏️ Editar manualmente</button>
+        <button onclick="editFormat('${sel.id}')" class="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">✏️ Editar manualmente</button>
         <button onclick="exportFormat('${sel.id}')" class="w-full btn-primary px-3 py-2.5 rounded-xl text-sm font-semibold">↓ Exportar este formato</button>
       </section>
     </div>
