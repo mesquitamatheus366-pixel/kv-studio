@@ -1369,18 +1369,70 @@ function openProject(id) {
   if (Array.isArray(p.layers)) p.layers.forEach(l => { if (l.visible === undefined) l.visible = true; });
   state.editorZoom = 1;
   state.editingFormatId = null;
-  show('brand'); // novo fluxo: abre Brand Studio (configura) → Formatos → ...
+  ensureLayerImages(p);
+  show('brand');
 }
 
-// Abre o editor para EDITAR UM FORMATO específico (manualmente, vindo da revisão)
 function editFormat(formatId) {
   state.editingFormatId = formatId;
   state.editorZoom = 1;
+  if (state.currentProject) ensureLayerImages(state.currentProject).then(()=>renderEditor());
   show('editor');
+}
+
+// Para CADA camada que não tem imagem mas tem posição,
+// recorta a região correspondente da imagem composta.
+async function ensureLayerImages(p) {
+  if (!p?.file?.dataUrl || !Array.isArray(p.layers)) return;
+  const pending = p.layers.filter(l => !l.dataUrl);
+  if (pending.length === 0) return;
+
+  // Carrega a imagem composta uma vez
+  let img;
+  try {
+    img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = p.file.dataUrl;
+    });
+  } catch(e) { console.warn('Falha ao carregar composta:', e); return; }
+
+  const imgW = img.naturalWidth;
+  const imgH = img.naturalHeight;
+
+  let changed = 0;
+  for (const layer of pending) {
+    // Tenta basePos primeiro, depois default da categoria
+    const pos = layer.basePos || DEFAULT_POS[layer.category] || DEFAULT_POS.Outro;
+    const x = Math.max(0, (pos.x / 100) * imgW);
+    const y = Math.max(0, (pos.y / 100) * imgH);
+    const w = Math.min(imgW - x, (pos.w / 100) * imgW);
+    const h = Math.min(imgH - y, (pos.h / 100) * imgH);
+    if (w < 4 || h < 4) continue;
+
+    try {
+      const c = document.createElement('canvas');
+      c.width = Math.round(w);
+      c.height = Math.round(h);
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, x, y, w, h, 0, 0, c.width, c.height);
+      layer.dataUrl = c.toDataURL('image/jpeg', 0.85);
+      changed++;
+    } catch(e) {
+      console.warn('Crop falhou para', layer.name, e);
+    }
+  }
+  console.log(`[Layer Images] Gerei ${changed} de ${pending.length} pendentes`);
+  if (changed > 0) {
+    persistAll();
+    if (state.activeScreen === 'editor') renderEditor();
+  }
 }
 
 function renderEditor() {
   const p = state.currentProject;
+  if (p) ensureLayerImages(p); // garante imagens em cada visualização
   if (!p) {
     document.getElementById('editor-canvas-wrap').innerHTML = `
       <div class="text-center p-10">
