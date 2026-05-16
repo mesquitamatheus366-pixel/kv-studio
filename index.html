@@ -1039,19 +1039,42 @@ document.getElementById('psd-file-input').addEventListener('change', async (e) =
       } else {
         toast('PSD lido mas sem imagem composta');
       }
-      // extrai camadas reais
+      // extrai camadas REAIS com imagem individual + posição
       const layers = [];
+      const psdW = psd.width || 1;
+      const psdH = psd.height || 1;
       function walk(layer) {
         if (layer.children && layer.children.length) {
           layer.children.forEach(walk);
         } else {
           if (!layer.name) return;
+          const left = layer.left ?? 0;
+          const top = layer.top ?? 0;
+          const right = layer.right ?? 0;
+          const bottom = layer.bottom ?? 0;
+          const w = Math.max(0, right - left);
+          const h = Math.max(0, bottom - top);
+          let layerDataUrl = null;
+          if (layer.canvas && w > 0 && h > 0) {
+            try {
+              layerDataUrl = canvasToDataURLCapped(layer.canvas, 1200);
+            } catch(err) { console.warn('falha ao extrair camada', layer.name, err); }
+          }
+          const basePos = (w > 0 && h > 0) ? {
+            x: (left / psdW) * 100,
+            y: (top / psdH) * 100,
+            w: (w / psdW) * 100,
+            h: (h / psdH) * 100,
+          } : null;
           layers.push({
             id: 'l' + Date.now() + '_' + layers.length,
             original: layer.name,
             name: layer.name,
             category: guessCategory(layer.name),
             visible: !layer.hidden,
+            dataUrl: layerDataUrl,    // ★ imagem individual da camada
+            basePos,                   // ★ posição real no PSD (em %)
+            opacity: layer.opacity ?? 1,
           });
         }
       }
@@ -1371,7 +1394,7 @@ function renderEditor() {
   document.getElementById('editor-zoom-val').textContent = `${Math.round(z*100)}%`;
 
   if (p.file?.dataUrl) {
-    // Define dimensões do canvas: se editando formato, usa aspect dele; senão usa imagem natural
+    // Define dimensões do canvas
     let canvasW, canvasH, aspectInfo;
     if (fmt) {
       const aspect = fmt.w / fmt.h;
@@ -1380,22 +1403,47 @@ function renderEditor() {
       else { canvasH = maxH; canvasW = maxH * aspect; }
       aspectInfo = `Formato: ${fmt.w}×${fmt.h} (proporção ${aspect.toFixed(2)})`;
     } else {
-      canvasW = 720; canvasH = 'auto';
+      // Sem formato: usa aspect natural do PSD/imagem
+      const maxW = 720, maxH = 600;
+      const natW = p.file.width || 1080, natH = p.file.height || 1920;
+      const aspect = natW / natH;
+      if (aspect > maxW/maxH) { canvasW = maxW; canvasH = maxW / aspect; }
+      else { canvasH = maxH; canvasW = maxH * aspect; }
       aspectInfo = p.file.name?.toLowerCase().endsWith('.psd')
-        ? `PSD · ${p.file.width||'?'}×${p.file.height||'?'}`
+        ? `PSD · ${natW}×${natH}`
         : 'KV master';
     }
-    const isPSD = p.file.name?.toLowerCase().endsWith('.psd');
-    wrap.innerHTML = `
-      <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
-        <div class="relative" style="width:${canvasW}px;${canvasH==='auto'?'':`height:${canvasH}px`}; ${fmt?'overflow:hidden;':''}">
-          <img src="${p.file.dataUrl}" id="editor-img" class="block ${fmt?'absolute inset-0 w-full h-full object-cover':'max-w-[720px] max-h-[600px] w-auto h-auto'}" alt="${p.nome}" />
-          <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
+
+    // ★ Tem camadas individuais extraídas do PSD?
+    const hasLayerImages = (p.layers||[]).some(l => l.dataUrl);
+
+    if (hasLayerImages) {
+      // Pilha de camadas REAIS — cada uma com posição e imagem própria
+      wrap.innerHTML = `
+        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-zinc-900" style="transform: scale(${z}); transform-origin: center;">
+          <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden;">
+            <img src="${p.file.dataUrl}" class="absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'} opacity-10 pointer-events-none" alt="referência composta" />
+            <div id="layer-stack" class="absolute inset-0"></div>
+            <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
+          </div>
+          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${(p.layers||[]).filter(l=>l.dataUrl).length} camadas reais</div>
         </div>
-        <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo}</div>
-      </div>
-    `;
-    renderLayerOverlays();
+      `;
+      renderLayerImages();
+      renderLayerOverlays();
+    } else {
+      // PNG/JPG ou PSD sem camadas extraíveis: imagem composta + overlays mock
+      wrap.innerHTML = `
+        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-white" style="transform: scale(${z}); transform-origin: center;">
+          <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden;">
+            <img src="${p.file.dataUrl}" id="editor-img" class="block absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'}" alt="${p.nome}" />
+            <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
+          </div>
+          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo}</div>
+        </div>
+      `;
+      renderLayerOverlays();
+    }
   } else if (p.file && !p.file.dataUrl) {
     // PSD aberto antes mas perdeu o dataUrl (quota localStorage)
     wrap.innerHTML = `
@@ -1434,12 +1482,28 @@ function getLayerPos(layer) {
   const formatId = state.editingFormatId || '__base__';
   if (!layer.positions) layer.positions = {};
   if (!layer.positions[formatId]) {
-    layer.positions[formatId] = { ...(DEFAULT_POS[layer.category] || DEFAULT_POS.Outro) };
+    // Prioridade: 1) posição real do PSD  2) default da categoria
+    layer.positions[formatId] = { ...(layer.basePos || DEFAULT_POS[layer.category] || DEFAULT_POS.Outro) };
   }
   return layer.positions[formatId];
 }
 
 state.selectedLayerId = null;
+
+// Renderiza cada camada do PSD como uma imagem posicionada (pilha real)
+function renderLayerImages() {
+  const stack = document.getElementById('layer-stack');
+  if (!stack) return;
+  const p = state.currentProject;
+  const all = (p.layers || []).filter(l => l.visible !== false && l.dataUrl);
+  // p.layers[0] é o topo da pilha → renderizar por último (z-index maior)
+  const reversed = all.slice().reverse();
+  stack.innerHTML = reversed.map(l => {
+    const pos = getLayerPos(l);
+    const op = l.opacity ?? 1;
+    return `<img src="${l.dataUrl}" data-layer-img="${l.id}" class="absolute pointer-events-none select-none" draggable="false" style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%;opacity:${op};object-fit:fill" alt="${l.name}" />`;
+  }).join('');
+}
 
 function renderLayerOverlays() {
   const overlays = document.getElementById('editor-overlays');
@@ -1486,6 +1550,7 @@ function onOverlayDrag(e, layerId) {
     const dy = ((ev.clientY - startY) / rect.height) * 100;
     pos.x = Math.max(0, Math.min(100 - pos.w, initX + dx));
     pos.y = Math.max(0, Math.min(100 - pos.h, initY + dy));
+    renderLayerImages();
     renderLayerOverlays();
   }
   function onUp() {
@@ -1495,6 +1560,7 @@ function onOverlayDrag(e, layerId) {
   }
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
+  renderLayerImages();
   renderLayerOverlays();
 }
 
@@ -1524,6 +1590,7 @@ function onOverlayResize(e, layerId, corner) {
     pos.y = Math.max(0, Math.min(100 - h, y));
     pos.w = Math.min(100 - pos.x, w);
     pos.h = Math.min(100 - pos.y, h);
+    renderLayerImages();
     renderLayerOverlays();
   }
   function onUp() {
@@ -1535,15 +1602,15 @@ function onOverlayResize(e, layerId, corner) {
   document.addEventListener('mouseup', onUp);
 }
 
-// Reset posição da camada (volta ao default da categoria)
+// Reset posição da camada (volta ao basePos do PSD ou default)
 function resetLayerPos(layerId) {
   const p = state.currentProject;
   const layer = p.layers.find(l => l.id === layerId);
   if (!layer) return;
   const fmtId = state.editingFormatId || '__base__';
   if (layer.positions && layer.positions[fmtId]) {
-    layer.positions[fmtId] = { ...(DEFAULT_POS[layer.category] || DEFAULT_POS.Outro) };
-    persistAll(); renderLayerOverlays();
+    layer.positions[fmtId] = { ...(layer.basePos || DEFAULT_POS[layer.category] || DEFAULT_POS.Outro) };
+    persistAll(); renderLayerImages(); renderLayerOverlays();
     toast('Posição resetada');
   }
 }
@@ -1598,7 +1665,10 @@ function selectLayer(id) {
 function toggleLayerVisible(i) {
   const p = state.currentProject; if (!p?.layers?.[i]) return;
   p.layers[i].visible = p.layers[i].visible === false ? true : false;
-  persistAll(); renderEditor();
+  persistAll();
+  renderLayerImages();
+  renderLayerOverlays();
+  renderEditorLayers();
 }
 function updateEditorLayerName(i, name) {
   const p = state.currentProject; if (!p?.layers?.[i]) return;
