@@ -1043,9 +1043,11 @@ document.getElementById('psd-file-input').addEventListener('change', async (e) =
       const layers = [];
       const psdW = psd.width || 1;
       const psdH = psd.height || 1;
-      function walk(layer) {
+      console.log(`[PSD] ${psdW}×${psdH}, composite canvas:`, !!psd.canvas);
+
+      function walk(layer, parentPath = '') {
         if (layer.children && layer.children.length) {
-          layer.children.forEach(walk);
+          layer.children.forEach(c => walk(c, parentPath ? `${parentPath}/${layer.name||''}` : (layer.name||'')));
         } else {
           if (!layer.name) return;
           const left = layer.left ?? 0;
@@ -1054,31 +1056,59 @@ document.getElementById('psd-file-input').addEventListener('change', async (e) =
           const bottom = layer.bottom ?? 0;
           const w = Math.max(0, right - left);
           const h = Math.max(0, bottom - top);
-          let layerDataUrl = null;
-          if (layer.canvas && w > 0 && h > 0) {
+
+          // 1) Tenta canvas direto
+          let layerCanvas = layer.canvas;
+          // 2) Se não, monta canvas a partir de imageData
+          if (!layerCanvas && layer.imageData) {
             try {
-              layerDataUrl = canvasToDataURLCapped(layer.canvas, 1200);
-            } catch(err) { console.warn('falha ao extrair camada', layer.name, err); }
+              const c = document.createElement('canvas');
+              c.width = layer.imageData.width;
+              c.height = layer.imageData.height;
+              c.getContext('2d').putImageData(layer.imageData, 0, 0);
+              layerCanvas = c;
+            } catch(e) { /* segue */ }
           }
+          let layerDataUrl = null;
+          if (layerCanvas && w > 0 && h > 0) {
+            try { layerDataUrl = canvasToDataURLCapped(layerCanvas, 1200); }
+            catch(err) { console.warn('falha ao extrair camada', layer.name, err); }
+          }
+          // 3) FALLBACK: se não conseguiu extrair, recorta a região no composite
+          //    (vai ter o fundo "vazado" junto, mas pelo menos o usuário vê algo movendo)
+          if (!layerDataUrl && psd.canvas && w > 0 && h > 0) {
+            try {
+              const cropped = document.createElement('canvas');
+              cropped.width = w;
+              cropped.height = h;
+              cropped.getContext('2d').drawImage(psd.canvas, left, top, w, h, 0, 0, w, h);
+              layerDataUrl = canvasToDataURLCapped(cropped, 1200);
+            } catch(e) { console.warn('crop fallback falhou', layer.name, e); }
+          }
+
           const basePos = (w > 0 && h > 0) ? {
             x: (left / psdW) * 100,
             y: (top / psdH) * 100,
             w: (w / psdW) * 100,
             h: (h / psdH) * 100,
           } : null;
+
+          console.log(`[PSD camada] "${layer.name}" pos=(${left},${top}) ${w}×${h} canvas=${!!layer.canvas} imageData=${!!layer.imageData} extracted=${!!layerDataUrl}`);
+
           layers.push({
             id: 'l' + Date.now() + '_' + layers.length,
             original: layer.name,
             name: layer.name,
             category: guessCategory(layer.name),
             visible: !layer.hidden,
-            dataUrl: layerDataUrl,    // ★ imagem individual da camada
-            basePos,                   // ★ posição real no PSD (em %)
+            dataUrl: layerDataUrl,
+            basePos,
             opacity: layer.opacity ?? 1,
           });
         }
       }
-      (psd.children || []).forEach(walk);
+      (psd.children || []).forEach(c => walk(c));
+      console.log(`[PSD] Total ${layers.length} camadas, ${layers.filter(l=>l.dataUrl).length} com imagem`);
       state.psdLayers = layers.length ? layers : PSD_LAYERS_INITIAL.map(l => ({ ...l }));
       openPSDReview();
     } catch (err) {
@@ -1419,14 +1449,15 @@ function renderEditor() {
 
     if (hasLayerImages) {
       // Pilha de camadas REAIS — cada uma com posição e imagem própria
+      const layersExtracted = (p.layers||[]).filter(l=>l.dataUrl).length;
+      const totalLayers = (p.layers||[]).length;
       wrap.innerHTML = `
-        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden bg-zinc-900" style="transform: scale(${z}); transform-origin: center;">
+        <div class="relative inline-block shadow-2xl rounded-lg overflow-hidden" style="transform: scale(${z}); transform-origin: center; background: #0a0a0a">
           <div class="relative" style="width:${canvasW}px;height:${canvasH}px; overflow:hidden;">
-            <img src="${p.file.dataUrl}" class="absolute inset-0 w-full h-full ${fmt?'object-cover':'object-contain'} opacity-10 pointer-events-none" alt="referência composta" />
             <div id="layer-stack" class="absolute inset-0"></div>
             <div id="editor-overlays" class="absolute inset-0 pointer-events-none"></div>
           </div>
-          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${(p.layers||[]).filter(l=>l.dataUrl).length} camadas reais</div>
+          <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur text-white text-[10px] font-semibold">${aspectInfo} · ${layersExtracted}/${totalLayers} camadas com imagem</div>
         </div>
       `;
       renderLayerImages();
