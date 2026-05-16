@@ -66,14 +66,13 @@ tailwind.config = {
 </head>
 <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors">
 
-<!-- =========== TOP RIGHT CONTROLS =========== -->
-<div id="top-controls" class="fixed top-3 right-3 z-50 flex items-center gap-2">
-  <!-- dev-nav recolhível (botão menu + dropdown) -->
+<!-- =========== TOP RIGHT: NAV DE DEV =========== -->
+<div id="top-controls" class="fixed top-3 right-3 z-50">
   <div id="dev-nav-wrap" class="relative">
-    <button id="dev-nav-btn" onclick="toggleDevNav()" class="w-10 h-10 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition" title="Navegar entre telas">
+    <button id="dev-nav-btn" onclick="toggleDevNav()" class="w-11 h-11 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition" title="Navegar entre telas">
       <span>☰</span>
     </button>
-    <div id="dev-nav-menu" class="hidden absolute top-12 right-0 bg-white/95 dark:bg-zinc-900/95 glass shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex flex-col gap-1 text-xs min-w-[160px]">
+    <div id="dev-nav-menu" class="hidden absolute top-12 right-0 bg-white/95 dark:bg-zinc-900/95 glass shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex flex-col gap-1 text-xs min-w-[180px]">
       <button data-go="landing" class="nav-btn text-left px-3 py-2 rounded-lg">Início</button>
       <button data-go="repositorio" class="nav-btn text-left px-3 py-2 rounded-lg">Repositório</button>
       <button data-go="brand" class="nav-btn text-left px-3 py-2 rounded-lg">Brand Studio</button>
@@ -83,16 +82,18 @@ tailwind.config = {
       <button data-go="aprovacao" class="nav-btn text-left px-3 py-2 rounded-lg">Aprovação</button>
     </div>
   </div>
-  <button id="theme-toggle" onclick="toggleTheme()" class="w-10 h-10 rounded-xl bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-lg hover:scale-105 transition" title="Alternar tema">
-    <span class="theme-icon-light">☀️</span>
-    <span class="theme-icon-dark hidden">🌙</span>
-  </button>
 </div>
 
-<div id="toasts" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+<!-- =========== BOTTOM RIGHT: THEME =========== -->
+<button id="theme-toggle" onclick="toggleTheme()" class="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-900/90 glass shadow-glow border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-xl hover:scale-110 transition" title="Alternar tema">
+  <span class="theme-icon-light">☀️</span>
+  <span class="theme-icon-dark hidden">🌙</span>
+</button>
+
+<div id="toasts" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 space-y-2"></div>
 
 <!-- =================================================== LANDING -->
-<div id="landing" class="screen active min-h-screen flex-col relative overflow-hidden">
+<div id="landing" class="screen active min-h-screen flex-col relative overflow-x-hidden">
   <!-- background glow effects -->
   <div class="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl" style="background: radial-gradient(circle, #8b5cf6 0%, transparent 70%)"></div>
   <div class="absolute -bottom-40 -right-40 w-[700px] h-[700px] rounded-full opacity-30 blur-3xl" style="background: radial-gradient(circle, #c026d3 0%, transparent 70%)"></div>
@@ -100,11 +101,15 @@ tailwind.config = {
   <!-- top nav minimalista -->
   <header class="relative z-10 h-20 px-10 flex items-center justify-between">
     <div class="logo-slot"></div>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-zinc-600 dark:text-zinc-400">
+      <a onclick="document.getElementById('como-funciona').scrollIntoView({behavior:'smooth'})" class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Como funciona</a>
+      <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Recursos</a>
+    </nav>
     <button onclick="show('repositorio')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Entrar no app</button>
   </header>
 
   <!-- hero -->
-  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-10 text-center max-w-4xl mx-auto w-full pb-20">
+  <section class="relative z-10 flex flex-col items-center justify-center px-10 text-center max-w-4xl mx-auto w-full pt-12 pb-24">
     <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-300 dark:border-brand-700 bg-brand-50/50 dark:bg-brand-950/50 backdrop-blur text-xs font-medium mb-8">
       <span class="w-2 h-2 rounded-full gradient-bg animate-pulse"></span>
       <span>Powered by Claude Vision</span>
@@ -122,7 +127,114 @@ tailwind.config = {
     <button onclick="show('repositorio')" class="btn-primary px-7 py-3.5 rounded-xl text-base font-semibold">
       Entrar no app →
     </button>
-  </main>
+  </section>
+
+  <!-- como funciona — 7 fases -->
+  <section id="como-funciona" class="relative z-10 px-10 py-24 max-w-5xl mx-auto w-full">
+    <div class="text-center mb-16">
+      <span class="inline-block text-xs font-bold uppercase tracking-widest gradient-text mb-3">Como funciona</span>
+      <h2 class="text-4xl md:text-5xl font-bold tracking-tight">Do brand kit à entrega <br><span class="gradient-text">em 7 fases</span></h2>
+      <p class="text-zinc-600 dark:text-zinc-400 mt-4 max-w-2xl mx-auto">Um fluxo guiado e inteligente, que respeita a hierarquia de aprovação da sua agência sem te travar.</p>
+    </div>
+
+    <div class="relative space-y-1">
+      <!-- linha vertical do timeline -->
+      <div class="absolute left-6 top-6 bottom-6 w-px bg-gradient-to-b from-brand-300 via-brand-500 to-brand-700 dark:from-brand-700 dark:via-brand-500 dark:to-brand-300"></div>
+
+      <!-- fases -->
+      <div class="relative flex gap-6 pb-8">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">1</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">Brand Studio</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Configura logo, tipografia, paleta com papéis e regras de marca. A IA usa isso em todo desdobramento.</p>
+        </div>
+      </div>
+
+      <div class="relative flex gap-6 pb-8">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">2</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">KV Master</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Faz upload de um PSD com camadas ou cria o key visual direto no editor nativo da plataforma.</p>
+        </div>
+      </div>
+
+      <div class="relative flex gap-6 pb-8">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">3</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">Seleção de formatos</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Escolhe até 5 formatos âncora — os mais distintos. O resto a IA deriva automaticamente.</p>
+        </div>
+      </div>
+
+      <div class="relative flex gap-6 pb-8">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">4</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">Wireframe anotado</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">A IA gera wireframes clicáveis. Você comenta cada elemento em linguagem natural — antes de qualquer pixel.</p>
+        </div>
+      </div>
+
+      <div class="relative flex gap-6 pb-8">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">5</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">Diálogo com a IA</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">A IA confirma como vai aplicar cada orientação. Você aprova ou ajusta — só então ela gera.</p>
+        </div>
+      </div>
+
+      <div class="relative flex gap-6 pb-8">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">6</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">Revisão</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Canvas com todos os formatos gerados. Edita manualmente ou pede ajuste global à IA — "aumenta o logo em todos".</p>
+        </div>
+      </div>
+
+      <div class="relative flex gap-6">
+        <div class="shrink-0 w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-white font-bold shadow-glow z-10">7</div>
+        <div class="flex-1 pt-2.5">
+          <h3 class="font-bold text-lg">Aprovação e entrega</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Sênior aprova, revisora valida texto, designer exporta. Aprovação retroativa não trava ninguém.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- features -->
+  <section id="features" class="relative z-10 px-10 py-24 max-w-6xl mx-auto w-full">
+    <div class="text-center mb-16">
+      <span class="inline-block text-xs font-bold uppercase tracking-widest gradient-text mb-3">Por que usar</span>
+      <h2 class="text-4xl md:text-5xl font-bold tracking-tight">Pensado para <span class="gradient-text">agências</span></h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
+        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">🤖</div>
+        <h3 class="font-bold text-lg mb-2">IA que dialoga, não chuta</h3>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">A IA gera wireframes anotados antes de qualquer pixel. Você corrige a intenção em linguagem natural — ela confirma e só então gera.</p>
+      </div>
+      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
+        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">🎨</div>
+        <h3 class="font-bold text-lg mb-2">Brand Studio integrado</h3>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">Logo, tipografia, paleta com papéis e regras de marca. A IA consulta o brand kit em todo desdobramento.</p>
+      </div>
+      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
+        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">✅</div>
+        <h3 class="font-bold text-lg mb-2">Aprovação que não trava</h3>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">Designer pode exportar sem ok do sênior. Aprovação retroativa, revisora separada, status com bolinhas coloridas.</p>
+      </div>
+    </div>
+
+    <div class="mt-16 text-center">
+      <button onclick="show('repositorio')" class="btn-primary px-8 py-3.5 rounded-xl text-base font-semibold">Entrar no app →</button>
+    </div>
+  </section>
+
+  <!-- footer -->
+  <footer class="relative z-10 border-t border-zinc-200 dark:border-zinc-800 px-10 py-6 flex items-center justify-between text-xs text-zinc-500">
+    <span>© 2026 kv.studio · Protótipo</span>
+    <span>Feito com 💜 por Matheus Mesquita</span>
+  </footer>
 </div>
 
 <!-- =================================================== REPOSITÓRIO -->
@@ -491,6 +603,7 @@ const BACK_MAP = { repositorio:'landing', brand:'repositorio', formatos:'brand',
 
 const state = {
   activeScreen: 'landing',
+  projetos: null, // setado abaixo após PROJETOS const
   brandSection: 'paleta',
   selectedFormats: ['f1','f2','f3','f4'],
   customFormats: [],
@@ -507,6 +620,18 @@ FORMATS.forEach((f,i)=>{
   state.revisaoStatus[f.id] = 'em_producao';
   state.approvalStatus[f.id] = i<5 ? 'aprovado' : 'em_producao';
 });
+
+// projetos mutáveis (para suportar exclusão)
+state.projetos = PROJETOS.map(p => ({ ...p }));
+
+function deleteProject(id) {
+  const p = state.projetos.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Excluir o projeto "${p.nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  state.projetos = state.projetos.filter(x => x.id !== id);
+  renderRepositorio();
+  toast(`Projeto "${p.nome}" excluído`);
+}
 
 // THEME
 function toggleTheme() {
@@ -564,10 +689,23 @@ function back(currentId) { show(BACK_MAP[currentId] || 'repositorio'); }
 function toggleDevNav() {
   document.getElementById('dev-nav-menu').classList.toggle('hidden');
 }
-// fecha dev-nav ao clicar fora
+
+function toggleProjectMenu(id, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  document.querySelectorAll('[id^="menu-"]').forEach(m => {
+    if (m.id !== `menu-${id}`) m.classList.add('hidden');
+  });
+  const menu = document.getElementById(`menu-${id}`);
+  if (menu) menu.classList.toggle('hidden');
+}
+
+// fecha dev-nav e menus de projeto ao clicar fora
 document.addEventListener('click', e => {
   if (!e.target.closest('#dev-nav-wrap')) {
     document.getElementById('dev-nav-menu').classList.add('hidden');
+  }
+  if (!e.target.closest('[id^="menu-"]') && !e.target.closest('button[onclick^="toggleProjectMenu"]')) {
+    document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
   }
 });
 
@@ -593,23 +731,38 @@ function renderRepositorio() {
     </button>
   `).join('');
 
-  const cards = PROJETOS.map(p=>`
-    <button onclick="show('brand'); toast('Abrindo: ${p.nome}')" class="group block text-left rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-glow hover:border-brand-400/50 transition-all overflow-hidden">
-      <div class="aspect-[4/3] bg-gradient-to-br ${p.grad} relative overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-        <span class="absolute top-3 left-3 px-2.5 py-1 text-[11px] font-semibold bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded-full">${p.cliente}</span>
-        <div class="absolute bottom-3 left-3 text-white/90 text-xs font-medium">${p.total} formatos</div>
-      </div>
-      <div class="p-4 space-y-2">
-        <div class="font-semibold text-sm truncate">${p.nome}</div>
-        <div class="flex items-center justify-between text-xs text-zinc-500">
-          <span>${p.tempo}</span>
-          <div class="flex items-center gap-1.5">
-            ${Object.entries(p.status).filter(([,n])=>n>0).map(([s,n])=>`<span class="${STATUS_INFO[s].cls}" title="${STATUS_INFO[s].label}: ${n}"></span>`).join('')}
+  const cards = state.projetos.map(p=>`
+    <div class="group relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-glow hover:border-brand-400/50 transition-all overflow-hidden">
+      <button onclick="show('brand'); toast('Abrindo: ${p.nome}')" class="block w-full text-left">
+        <div class="aspect-[4/3] bg-gradient-to-br ${p.grad} relative overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+          <span class="absolute top-3 left-3 px-2.5 py-1 text-[11px] font-semibold bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded-full">${p.cliente}</span>
+          <div class="absolute bottom-3 left-3 text-white/90 text-xs font-medium">${p.total} formatos</div>
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="font-semibold text-sm truncate">${p.nome}</div>
+          <div class="flex items-center justify-between text-xs text-zinc-500">
+            <span>${p.tempo}</span>
+            <div class="flex items-center gap-1.5">
+              ${Object.entries(p.status).filter(([,n])=>n>0).map(([s,n])=>`<span class="${STATUS_INFO[s].cls}" title="${STATUS_INFO[s].label}: ${n}"></span>`).join('')}
+            </div>
+          </div>
+        </div>
+      </button>
+      <!-- menu de ações no hover -->
+      <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition">
+        <div class="relative">
+          <button onclick="toggleProjectMenu('${p.id}', event)" class="w-8 h-8 rounded-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 shadow-md" title="Mais opções">⋯</button>
+          <div id="menu-${p.id}" class="hidden absolute top-10 right-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 min-w-[160px] z-10">
+            <button onclick="show('brand'); toast('Abrindo: ${p.nome}')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📂 Abrir</button>
+            <button onclick="toast('Renomear (mock)')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">✏️ Renomear</button>
+            <button onclick="toast('Duplicar (mock)')" class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-2">📋 Duplicar</button>
+            <div class="h-px bg-zinc-200 dark:bg-zinc-800 my-1"></div>
+            <button onclick="deleteProject('${p.id}')" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition flex items-center gap-2">🗑️ Excluir projeto</button>
           </div>
         </div>
       </div>
-    </button>
+    </div>
   `).join('');
 
   document.getElementById('projetos-grid').innerHTML = `
