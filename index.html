@@ -68,7 +68,8 @@ tailwind.config = {
 
 <!-- =========== TOP RIGHT CONTROLS =========== -->
 <div class="fixed top-3 right-3 z-50 flex items-center gap-2">
-  <div class="bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex gap-1 text-xs">
+  <div id="dev-nav" class="bg-white/90 dark:bg-zinc-900/90 glass shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-xl p-1.5 flex gap-1 text-xs">
+    <button data-go="landing" class="nav-btn px-3 py-1.5 rounded-lg">Início</button>
     <button data-go="repositorio" class="nav-btn px-3 py-1.5 rounded-lg">Repositório</button>
     <button data-go="brand" class="nav-btn px-3 py-1.5 rounded-lg">Brand</button>
     <button data-go="formatos" class="nav-btn px-3 py-1.5 rounded-lg">Formatos</button>
@@ -84,20 +85,112 @@ tailwind.config = {
 
 <div id="toasts" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
-<!-- ===== Componente Logo (reutilizado nos headers) ===== -->
-<template id="tpl-logo">
-  <div class="flex items-center gap-2.5">
-    <div class="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white font-bold text-sm shadow-glow">kv</div>
-    <span class="font-bold tracking-tight text-base">kv<span class="gradient-text">.</span>studio</span>
-  </div>
-</template>
+<!-- =================================================== LANDING -->
+<div id="landing" class="screen active min-h-screen flex-col relative overflow-hidden">
+  <!-- background glow effects -->
+  <div class="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl" style="background: radial-gradient(circle, #8b5cf6 0%, transparent 70%)"></div>
+  <div class="absolute -bottom-40 -right-40 w-[700px] h-[700px] rounded-full opacity-30 blur-3xl" style="background: radial-gradient(circle, #c026d3 0%, transparent 70%)"></div>
+
+  <!-- top nav -->
+  <header class="relative z-10 h-20 px-10 flex items-center justify-between">
+    <div class="logo-slot"></div>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-zinc-600 dark:text-zinc-400">
+      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Produto</a>
+      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Como funciona</a>
+      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Preços</a>
+      <a class="hover:text-zinc-900 dark:hover:text-white transition cursor-pointer">Contato</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <button onclick="show('repositorio')" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">Entrar</button>
+      <button onclick="show('repositorio')" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Começar grátis</button>
+    </div>
+  </header>
+
+  <!-- hero -->
+  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-10 text-center max-w-5xl mx-auto w-full">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-300 dark:border-brand-700 bg-brand-50/50 dark:bg-brand-950/50 backdrop-blur text-xs font-medium mb-8">
+      <span class="w-2 h-2 rounded-full gradient-bg animate-pulse"></span>
+      <span>Powered by Claude Vision · MVP em construção</span>
+    </div>
+
+    <h1 class="text-6xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
+      Desdobre <span class="gradient-text">key visuals</span><br>
+      com inteligência de direção de arte
+    </h1>
+
+    <p class="text-lg md:text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed mb-10">
+      A plataforma que automatiza a adaptação de peças em múltiplos formatos digitais —
+      preservando hierarquia visual, regras de marca e leitura de cada peça.
+      <strong class="text-zinc-900 dark:text-white">Para agências que entregam rápido sem perder qualidade.</strong>
+    </p>
+
+    <div class="flex items-center gap-3 mb-16">
+      <button onclick="show('repositorio')" class="btn-primary px-7 py-3.5 rounded-xl text-base font-semibold">
+        Entrar no app →
+      </button>
+      <button onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" class="px-7 py-3.5 rounded-xl text-base font-semibold border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition">
+        Como funciona
+      </button>
+    </div>
+
+    <!-- proof bar -->
+    <div class="flex items-center gap-8 text-xs text-zinc-500 mb-4">
+      <span class="flex items-center gap-2"><span class="gradient-text font-bold">✓</span> Sem ferramenta de design</span>
+      <span class="flex items-center gap-2"><span class="gradient-text font-bold">✓</span> Aprovação integrada</span>
+      <span class="flex items-center gap-2"><span class="gradient-text font-bold">✓</span> PSD ou do zero</span>
+    </div>
+  </main>
+
+  <!-- features -->
+  <section id="features" class="relative z-10 px-10 py-20 max-w-6xl mx-auto w-full">
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
+        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">🤖</div>
+        <h3 class="font-bold text-lg mb-2">IA que dialoga, não chuta</h3>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          A IA gera wireframes anotados antes de qualquer pixel. Você corrige a intenção em linguagem natural — ela confirma e só então gera.
+        </p>
+      </div>
+
+      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
+        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">🎨</div>
+        <h3 class="font-bold text-lg mb-2">Brand Studio integrado</h3>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          Logo, tipografia, paleta com papéis e regras de marca. A IA consulta o brand kit em todo desdobramento.
+        </p>
+      </div>
+
+      <div class="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur hover:shadow-glow hover:border-brand-400/50 transition">
+        <div class="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-2xl mb-4 shadow-glow">✅</div>
+        <h3 class="font-bold text-lg mb-2">Aprovação que não trava</h3>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          Designer pode exportar sem ok do sênior. Aprovação retroativa, revisora separada, status com bolinhas coloridas.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-16 text-center">
+      <p class="text-sm text-zinc-500 mb-4">Pronto para experimentar?</p>
+      <button onclick="show('repositorio')" class="btn-primary px-8 py-3.5 rounded-xl text-base font-semibold">
+        Entrar no app agora →
+      </button>
+    </div>
+  </section>
+
+  <!-- footer -->
+  <footer class="relative z-10 border-t border-zinc-200 dark:border-zinc-800 px-10 py-6 flex items-center justify-between text-xs text-zinc-500">
+    <span>© 2026 kv.studio · Protótipo navegável</span>
+    <span>Feito com 💜 por Matheus Mesquita</span>
+  </footer>
+</div>
 
 <!-- =================================================== REPOSITÓRIO -->
-<div id="repositorio" class="screen active min-h-screen flex-col">
+<div id="repositorio" class="screen min-h-screen flex-col">
   <header class="h-16 px-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
-    <div class="flex items-center gap-6">
+    <div class="flex items-center gap-4">
+      <button onclick="show('landing')" class="w-10 h-10 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-lg transition" title="Voltar à página inicial">←</button>
       <div class="logo-slot"></div>
-      <span class="text-sm text-zinc-500">Repositório</span>
+      <span class="text-sm text-zinc-500 ml-2">Repositório</span>
     </div>
     <div class="flex items-center gap-3">
       <button class="relative w-10 h-10 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition">
@@ -133,7 +226,7 @@ tailwind.config = {
       </div>
     </aside>
 
-    <main class="flex-1 p-10 max-w-7xl">
+    <main class="flex-1 p-10 overflow-auto">
       <header class="flex items-end justify-between mb-8">
         <div>
           <h1 class="text-4xl font-bold tracking-tight">Olá, <span class="gradient-text">Matheus</span></h1>
@@ -142,7 +235,7 @@ tailwind.config = {
         <button onclick="openNewProject()" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2"><span class="text-lg leading-none">+</span> Novo projeto</button>
       </header>
 
-      <div id="projetos-grid" class="grid grid-cols-4 gap-5 mb-8"></div>
+      <div id="projetos-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 mb-8"></div>
 
       <footer class="pt-6 flex items-center gap-5 text-xs">
         <span class="font-semibold uppercase tracking-wide text-zinc-400">Status:</span>
@@ -169,7 +262,7 @@ tailwind.config = {
 
   <div class="flex flex-1">
     <nav id="brand-nav" class="w-60 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-1"></nav>
-    <main id="brand-content" class="flex-1 p-10 max-w-4xl space-y-8 overflow-auto"></main>
+    <main id="brand-content" class="flex-1 p-10 space-y-8 overflow-auto"></main>
   </div>
 </div>
 
@@ -186,7 +279,7 @@ tailwind.config = {
 
   <div id="stepper-formatos" class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-3"></div>
 
-  <main class="flex-1 p-10 max-w-6xl space-y-8 overflow-auto">
+  <main class="flex-1 p-10 space-y-8 overflow-auto">
     <header class="flex items-end justify-between">
       <div>
         <h1 class="text-4xl font-bold tracking-tight">Seleção de <span class="gradient-text">formatos</span></h1>
@@ -453,10 +546,10 @@ const AI_RESPONSES = {
   'Aviso':    'Aviso sanitário em 22% da área inferior (acima do mínimo regulatório).',
 };
 
-const BACK_MAP = { brand:'repositorio', formatos:'brand', wireframe:'formatos', revisao:'wireframe', aprovacao:'revisao' };
+const BACK_MAP = { repositorio:'landing', brand:'repositorio', formatos:'brand', wireframe:'formatos', revisao:'wireframe', aprovacao:'revisao' };
 
 const state = {
-  activeScreen: 'repositorio',
+  activeScreen: 'landing',
   brandSection: 'paleta',
   selectedFormats: ['f1','f2','f3','f4'],
   customFormats: [],
@@ -993,7 +1086,7 @@ function approveAll() {
 
 // BOOT
 renderRepositorio();
-show('repositorio');
+show('landing');
 
 document.getElementById('annotation-modal').addEventListener('click', e => { if(e.target.id==='annotation-modal') closeAnnotation(); });
 document.getElementById('new-project-modal').addEventListener('click', e => { if(e.target.id==='new-project-modal') closeNewProject(); });
